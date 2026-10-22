@@ -1,0 +1,406 @@
+<!doctype html>
+<html lang="da">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>Boobielicious</title>
+<meta name="description" content="En stille amme-tæller.">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Boobielicious">
+<meta name="theme-color" content="#F3EDE4" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#1C1916" media="(prefers-color-scheme: dark)">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;1,400&family=Inter:wght@400;500&display=swap">
+<style>
+  :root {
+    --bg: #F3EDE4;
+    --sand: #E7DCCD;
+    --sand-deep: #D9CAB6;
+    --ink: #3B322B;
+    --muted: #8E8174;
+    --line: #3B322B;
+    --accent: #B5654A;
+    --accent-soft: rgba(181, 101, 74, .16);
+    --sage: #9AA48C;
+    --serif: "Cormorant Garamond", "Cormorant", Georgia, "Times New Roman", serif;
+    --sans: "Inter", -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1C1916;
+      --sand: #27221E;
+      --sand-deep: #352E28;
+      --ink: #E9DFD2;
+      --muted: #8F8275;
+      --line: #D9CCBC;
+      --accent: #C7835F;
+      --accent-soft: rgba(199, 131, 95, .18);
+      --sage: #7F8A74;
+    }
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--sans);
+    -webkit-font-smoothing: antialiased;
+    -webkit-tap-highlight-color: transparent;
+    -webkit-user-select: none;
+    user-select: none;
+    overscroll-behavior: none;
+    overflow: hidden;
+  }
+  button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; touch-action: manipulation; }
+
+  .app {
+    height: 100%;
+    min-height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding:
+      calc(env(safe-area-inset-top) + 28px)
+      calc(env(safe-area-inset-right) + 24px)
+      calc(env(safe-area-inset-bottom) + 20px)
+      calc(env(safe-area-inset-left) + 24px);
+  }
+
+  header { text-align: center; }
+  .date {
+    font-size: 11px;
+    letter-spacing: .18em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .count {
+    margin-top: 18px;
+    font-family: var(--serif);
+    font-weight: 400;
+    line-height: 1;
+    display: flex;
+    align-items: baseline;
+    justify-content: center;
+    gap: .28em;
+  }
+  .count .n {
+    font-size: 84px;
+    display: inline-block;
+    min-width: .6em;
+    font-variant-numeric: lining-nums;
+  }
+  .count .n.bump { animation: bump .7s cubic-bezier(.2,.7,.2,1); }
+  .count .of {
+    font-size: 26px;
+    font-style: italic;
+    color: var(--muted);
+  }
+  @keyframes bump {
+    0% { opacity: 0; transform: translateY(8px); }
+    100% { opacity: 1; transform: none; }
+  }
+
+  /* Dots: 8 small markers under the counter */
+  .dots { display: flex; gap: 9px; justify-content: center; margin-top: 16px; height: 6px; }
+  .dots i {
+    width: 6px; height: 6px; border-radius: 50%;
+    border: 1px solid var(--sand-deep);
+    transition: background .6s ease, border-color .6s ease;
+  }
+  .dots i.on { background: var(--accent); border-color: var(--accent); }
+
+  main {
+    flex: 1;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 0;
+  }
+  .press {
+    position: relative;
+    width: min(62vw, 250px);
+    aspect-ratio: 1;
+    border-radius: 50%;
+    background: var(--sand);
+    display: grid;
+    place-items: center;
+    transition: transform .35s cubic-bezier(.2,.7,.2,1), background .4s ease;
+  }
+  .press:active { transform: scale(.965); }
+  .press svg { width: 64%; height: 64%; overflow: visible; }
+  .press svg .l { stroke: var(--line); }
+  .press svg .a { fill: var(--accent); transform-origin: 128px 122.5px; transform-box: view-box; }
+  .press.pulse svg .a { animation: drop 1s ease; }
+  @keyframes drop {
+    0% { transform: scale(1); }
+    35% { transform: scale(1.9); }
+    100% { transform: scale(1); }
+  }
+  .ring {
+    position: absolute; inset: 0;
+    border-radius: 50%;
+    border: 1px solid var(--accent);
+    opacity: 0;
+    pointer-events: none;
+  }
+  .press.pulse .ring { animation: ring 1.2s cubic-bezier(.2,.7,.2,1); }
+  .press.pulse .ring + .ring { animation-delay: .18s; }
+  @keyframes ring {
+    0% { opacity: .55; transform: scale(1); }
+    100% { opacity: 0; transform: scale(1.32); }
+  }
+  .hint {
+    position: absolute;
+    bottom: -38px; left: 0; right: 0;
+    text-align: center;
+    font-size: 12px;
+    color: var(--muted);
+    letter-spacing: .04em;
+    transition: opacity .5s ease;
+  }
+
+  footer { width: 100%; text-align: center; }
+  .times {
+    list-style: none;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 6px 16px;
+    max-width: 320px;
+    margin: 0 auto;
+    min-height: 20px;
+    font-size: 14px;
+    font-variant-numeric: tabular-nums;
+    color: var(--ink);
+  }
+  .times li { opacity: .78; }
+  .times li.new { animation: bump .7s ease; opacity: 1; }
+  .times .empty { color: var(--muted); font-size: 13px; opacity: 1; }
+  .undo {
+    margin-top: 22px;
+    padding: 10px 14px;
+    font-size: 12px;
+    color: var(--muted);
+    letter-spacing: .04em;
+    text-decoration: underline;
+    text-decoration-color: var(--sand-deep);
+    text-underline-offset: 4px;
+    transition: opacity .3s ease;
+  }
+  .undo:disabled { opacity: 0; pointer-events: none; }
+
+  /* Celebration */
+  .celebrate {
+    position: fixed; inset: 0;
+    pointer-events: none;
+    overflow: hidden;
+    z-index: 10;
+  }
+  .celebrate .p {
+    position: absolute;
+    top: -24px;
+    will-change: transform, opacity;
+    animation: fall linear forwards;
+  }
+  .celebrate .leaf { width: 9px; height: 14px; border-radius: 0 100% 0 100%; }
+  .celebrate .dot { width: 6px; height: 6px; border-radius: 50%; }
+  @keyframes fall {
+    0% { transform: translate3d(0, 0, 0) rotate(0deg); opacity: 0; }
+    10% { opacity: .9; }
+    85% { opacity: .9; }
+    100% { transform: translate3d(var(--drift), 105vh, 0) rotate(var(--spin)); opacity: 0; }
+  }
+  .message {
+    position: fixed;
+    left: 0; right: 0;
+    top: calc(env(safe-area-inset-top) + 24vh);
+    text-align: center;
+    padding: 0 32px;
+    z-index: 11;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 1.4s ease;
+  }
+  .message.show { opacity: 1; }
+  .message p {
+    display: inline-block;
+    background: color-mix(in srgb, var(--bg) 88%, transparent);
+    -webkit-backdrop-filter: blur(6px);
+    backdrop-filter: blur(6px);
+    padding: 18px 26px;
+    border-radius: 2px;
+  }
+  .message .big { display: block; font-family: var(--serif); font-size: 34px; font-style: italic; }
+  .message .small { display: block; margin-top: 6px; font-size: 13px; color: var(--muted); }
+
+  @media (max-height: 640px) {
+    .count .n { font-size: 66px; }
+    .press { width: min(52vw, 200px); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div class="date" id="date"></div>
+    <div class="count" aria-live="polite"><span class="n" id="n">0</span><span class="of">af 8</span></div>
+    <div class="dots" id="dots" aria-hidden="true"></div>
+  </header>
+
+  <main>
+    <button class="press" id="press" aria-label="Registrer amning">
+      <span class="ring"></span><span class="ring"></span>
+      <svg viewBox="52 14 136 170" aria-hidden="true" fill="none" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <path class="l" d="M72 18 C 68 46, 74 62, 92 78 C 112 95, 133 106, 129 121 C 125 136, 100 142, 90 139 C 82 144, 79 160, 84 180"/>
+        <circle class="l" cx="148" cy="134" r="21"/>
+        <path class="l" d="M145 134 q4.5 3.6 9 0"/>
+        <path class="l" d="M104 170 C 128 182, 162 178, 178 156"/>
+        <circle class="a" cx="128" cy="122.5" r="3.2" stroke="none"/>
+      </svg>
+      <span class="hint" id="hint">Tryk for at registrere</span>
+    </button>
+  </main>
+
+  <footer>
+    <ul class="times" id="times"></ul>
+    <button class="undo" id="undo" disabled>Fortryd seneste</button>
+  </footer>
+</div>
+
+<div class="celebrate" id="celebrate" aria-hidden="true"></div>
+<div class="message" id="message" role="status"><p><span class="big">Otte i dag.</span><span class="small">Du giver så meget. Hvil dig, når du kan.</span></p></div>
+
+<script>
+(() => {
+  const KEY = 'boobielicious.feeds';
+  const CEL = 'boobielicious.celebrated';
+  const GOAL = 8;
+  const KEEP_DAYS = 60;
+
+  const $ = id => document.getElementById(id);
+  const els = { date: $('date'), n: $('n'), dots: $('dots'), press: $('press'), times: $('times'), undo: $('undo'), hint: $('hint'), cel: $('celebrate'), msg: $('message') };
+
+  const store = {
+    get(k, fallback) { try { const v = localStorage.getItem(k); return v === null ? fallback : JSON.parse(v); } catch { return fallback; } },
+    set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} }
+  };
+
+  const dayKey = (d = new Date()) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  const midnight = () => { const d = new Date(); d.setHours(0, 0, 0, 0); return d.getTime(); };
+  const fmtTime = t => new Date(t).toLocaleTimeString('da-DK', { hour: '2-digit', minute: '2-digit' });
+  const fmtDate = d => d.toLocaleDateString('da-DK', { weekday: 'long', day: 'numeric', month: 'long' });
+
+  const all = () => store.get(KEY, []).filter(Number.isFinite).sort((a, b) => a - b);
+  const today = () => { const m = midnight(); return all().filter(t => t >= m); };
+
+  for (let i = 0; i < GOAL; i++) els.dots.appendChild(document.createElement('i'));
+
+  let currentDay = dayKey();
+
+  function render(opts = {}) {
+    const list = today();
+    const count = list.length;
+
+    els.date.textContent = fmtDate(new Date());
+    if (els.n.textContent !== String(count)) {
+      els.n.textContent = count;
+      if (opts.animate) { els.n.classList.remove('bump'); void els.n.offsetWidth; els.n.classList.add('bump'); }
+    }
+    [...els.dots.children].forEach((d, i) => d.classList.toggle('on', i < count));
+
+    els.times.innerHTML = '';
+    if (!count) {
+      const li = document.createElement('li');
+      li.className = 'empty';
+      li.textContent = 'Ingen amninger endnu i dag';
+      els.times.appendChild(li);
+    } else {
+      list.forEach((t, i) => {
+        const li = document.createElement('li');
+        li.textContent = fmtTime(t);
+        if (opts.animate && i === count - 1) li.className = 'new';
+        els.times.appendChild(li);
+      });
+    }
+    els.undo.disabled = count === 0;
+    els.hint.style.opacity = count === 0 ? 1 : 0;
+  }
+
+  let lastTap = 0;
+  els.press.addEventListener('click', () => {
+    const now = Date.now();
+    if (now - lastTap < 800) return; // undgå utilsigtede dobbelttryk
+    lastTap = now;
+
+    const data = all().filter(t => t >= now - KEEP_DAYS * 864e5);
+    data.push(now);
+    store.set(KEY, data);
+
+    els.press.classList.remove('pulse'); void els.press.offsetWidth; els.press.classList.add('pulse');
+    render({ animate: true });
+
+    if (today().length === GOAL && store.get(CEL, '') !== dayKey()) {
+      store.set(CEL, dayKey());
+      setTimeout(celebrate, 600);
+    }
+  });
+
+  els.undo.addEventListener('click', () => {
+    const list = today();
+    if (!list.length) return;
+    const last = list[list.length - 1];
+    const data = all();
+    data.splice(data.lastIndexOf(last), 1);
+    store.set(KEY, data);
+    render();
+  });
+
+  function celebrate() {
+    const styles = getComputedStyle(document.documentElement);
+    const colors = ['--accent', '--sage', '--sand-deep', '--muted'].map(v => styles.getPropertyValue(v).trim());
+    const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const pieces = reduce ? 0 : 34;
+    for (let i = 0; i < pieces; i++) {
+      const p = document.createElement('span');
+      p.className = 'p ' + (Math.random() < .55 ? 'leaf' : 'dot');
+      p.style.left = (Math.random() * 100) + 'vw';
+      p.style.background = colors[i % colors.length];
+      p.style.setProperty('--drift', ((Math.random() - .5) * 120).toFixed(0) + 'px');
+      p.style.setProperty('--spin', ((Math.random() - .5) * 540).toFixed(0) + 'deg');
+      p.style.animationDuration = (7 + Math.random() * 5).toFixed(2) + 's';
+      p.style.animationDelay = (Math.random() * 3.5).toFixed(2) + 's';
+      p.addEventListener('animationend', () => p.remove());
+      els.cel.appendChild(p);
+    }
+    els.msg.classList.add('show');
+    setTimeout(() => els.msg.classList.remove('show'), 6500);
+  }
+
+  // Nulstil ved midnat og når appen åbnes igen
+  function checkDay() {
+    const k = dayKey();
+    if (k !== currentDay) { currentDay = k; render(); }
+  }
+  setInterval(checkDay, 20000);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) { checkDay(); render(); } });
+
+  render();
+
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+  }
+})();
+</script>
+</body>
+</html>
