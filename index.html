@@ -7,10 +7,10 @@
 <meta name="description" content="En stille amme-tæller.">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Boobielicious">
-<meta name="theme-color" content="#F3EDE4" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#1C1916" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#F7F2EC">
+<meta name="color-scheme" content="light">
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
@@ -19,32 +19,21 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;1,400&family=Inter:wght@400;500&display=swap">
 <style>
   :root {
-    --bg: #F3EDE4;
+    --bg: #F7F2EC;
     --sand: #E7DCCD;
     --sand-deep: #D9CAB6;
     --ink: #3B322B;
     --muted: #8E8174;
     --line: #3B322B;
-    --accent: #B5654A;
-    --accent-soft: rgba(181, 101, 74, .16);
+    --accent: #E27D95;
+    --accent-soft: rgba(226, 125, 149, .16);
     --sage: #9AA48C;
+    --skin: #F8D3CD;
+    --areola: #EE7F98;
+    --nipple: #B4475F;
     --serif: "Cormorant Garamond", "Cormorant", Georgia, "Times New Roman", serif;
     --sans: "Inter", -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
   }
-  @media (prefers-color-scheme: dark) {
-    :root {
-      --bg: #1C1916;
-      --sand: #27221E;
-      --sand-deep: #352E28;
-      --ink: #E9DFD2;
-      --muted: #8F8275;
-      --line: #D9CCBC;
-      --accent: #C7835F;
-      --accent-soft: rgba(199, 131, 95, .18);
-      --sage: #7F8A74;
-    }
-  }
-
   * { box-sizing: border-box; margin: 0; padding: 0; }
   html, body { height: 100%; }
   body {
@@ -126,36 +115,42 @@
   }
   .press {
     position: relative;
-    width: min(62vw, 250px);
+    width: min(66vw, 264px);
     aspect-ratio: 1;
     border-radius: 50%;
-    background: var(--sand);
     display: grid;
     place-items: center;
-    transition: transform .35s cubic-bezier(.2,.7,.2,1), background .4s ease;
+    transition: transform .35s cubic-bezier(.2,.7,.2,1);
   }
   .press:active { transform: scale(.965); }
-  .press svg { width: 64%; height: 64%; overflow: visible; }
-  .press svg .l { stroke: var(--line); }
-  .press svg .a { fill: var(--accent); transform-origin: 128px 122.5px; transform-box: view-box; }
-  .press.pulse svg .a { animation: drop 1s ease; }
-  @keyframes drop {
+  .press svg { width: 100%; height: 100%; overflow: visible; }
+  .press .areola { transform-origin: 100px 100px; transform-box: view-box; }
+  .press.pulse .areola { animation: soft 1s ease; }
+  @keyframes soft {
     0% { transform: scale(1); }
-    35% { transform: scale(1.9); }
+    35% { transform: scale(1.08); }
     100% { transform: scale(1); }
+  }
+  .press .drop { transform-origin: 100px 132px; transform-box: view-box; }
+  .press.pulse .drop { animation: drip 1.3s cubic-bezier(.4,0,.2,1); }
+  @keyframes drip {
+    0% { transform: translateY(0) scale(1); opacity: 1; }
+    45% { transform: translateY(26px) scale(.8); opacity: 0; }
+    46% { transform: translateY(-6px) scale(.2); opacity: 0; }
+    100% { transform: translateY(0) scale(1); opacity: 1; }
   }
   .ring {
     position: absolute; inset: 0;
     border-radius: 50%;
-    border: 1px solid var(--accent);
+    border: 1.5px solid var(--areola);
     opacity: 0;
     pointer-events: none;
   }
   .press.pulse .ring { animation: ring 1.2s cubic-bezier(.2,.7,.2,1); }
   .press.pulse .ring + .ring { animation-delay: .18s; }
   @keyframes ring {
-    0% { opacity: .55; transform: scale(1); }
-    100% { opacity: 0; transform: scale(1.32); }
+    0% { opacity: .5; transform: scale(1); }
+    100% { opacity: 0; transform: scale(1.28); }
   }
   .hint {
     position: absolute;
@@ -243,7 +238,7 @@
 
   @media (max-height: 640px) {
     .count .n { font-size: 66px; }
-    .press { width: min(52vw, 200px); }
+    .press { width: min(56vw, 210px); }
   }
   @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
@@ -261,12 +256,13 @@
   <main>
     <button class="press" id="press" aria-label="Registrer amning">
       <span class="ring"></span><span class="ring"></span>
-      <svg viewBox="52 14 136 170" aria-hidden="true" fill="none" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-        <path class="l" d="M72 18 C 68 46, 74 62, 92 78 C 112 95, 133 106, 129 121 C 125 136, 100 142, 90 139 C 82 144, 79 160, 84 180"/>
-        <circle class="l" cx="148" cy="134" r="21"/>
-        <path class="l" d="M145 134 q4.5 3.6 9 0"/>
-        <path class="l" d="M104 170 C 128 182, 162 178, 178 156"/>
-        <circle class="a" cx="128" cy="122.5" r="3.2" stroke="none"/>
+      <svg viewBox="0 0 200 200" aria-hidden="true">
+        <circle cx="100" cy="100" r="100" fill="var(--skin)"/>
+        <g class="areola">
+          <circle cx="100" cy="100" r="22" fill="var(--areola)"/>
+          <circle cx="100" cy="100" r="10" fill="var(--nipple)"/>
+        </g>
+        <path class="drop" d="M100 128 C 103 136, 106 142, 106 147 A 6 6 0 0 1 94 147 C 94 142, 97 136, 100 128 Z" fill="#fff"/>
       </svg>
       <span class="hint" id="hint">Tryk for at registrere</span>
     </button>
@@ -368,7 +364,7 @@
 
   function celebrate() {
     const styles = getComputedStyle(document.documentElement);
-    const colors = ['--accent', '--sage', '--sand-deep', '--muted'].map(v => styles.getPropertyValue(v).trim());
+    const colors = ['--areola', '--skin', '--sage', '--sand-deep'].map(v => styles.getPropertyValue(v).trim());
     const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
     const pieces = reduce ? 0 : 34;
     for (let i = 0; i < pieces; i++) {
