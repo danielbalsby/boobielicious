@@ -107,6 +107,7 @@
 
   main {
     flex: 1;
+    padding-bottom: 56px;
     width: 100%;
     display: flex;
     align-items: center;
@@ -152,9 +153,50 @@
     0% { opacity: .5; transform: scale(1); }
     100% { opacity: 0; transform: scale(1.28); }
   }
+  /* Tidtagning: tynd ring om brystet + tid nedenunder */
+  .press .track {
+    position: absolute;
+    inset: -14px;
+    width: calc(100% + 28px); height: calc(100% + 28px);
+    transform: rotate(-90deg);
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity .8s ease;
+  }
+  .timing .track { opacity: 1; }
+  .track circle { fill: none; }
+  .track .bg { stroke: var(--sand-deep); stroke-width: .6; }
+  .track .fg { stroke: var(--areola); stroke-width: 1.4; stroke-linecap: round; stroke-dasharray: 0 1; transition: stroke-dasharray 1s linear; }
+  .track .tick { fill: var(--sand-deep); stroke: none; transition: fill .6s ease; }
+  .track .tick.done { fill: var(--areola); }
+  .timer {
+    position: absolute;
+    top: calc(100% + 26px); left: -40px; right: -40px;
+    text-align: center;
+    opacity: 0;
+    transition: opacity .6s ease;
+    pointer-events: none;
+  }
+  .timing .timer { opacity: 1; }
+  .timer .clock {
+    display: block;
+    font-family: var(--serif);
+    font-size: 34px;
+    line-height: 1;
+    font-variant-numeric: lining-nums tabular-nums;
+  }
+  .timer .sub {
+    display: block;
+    margin-top: 6px;
+    font-size: 12px;
+    color: var(--muted);
+    letter-spacing: .04em;
+  }
+  .alarm .timer .sub { color: var(--nipple); }
+  .alarm .ring { animation: ring 1.6s cubic-bezier(.2,.7,.2,1) infinite !important; }
   .hint {
     position: absolute;
-    bottom: -38px; left: 0; right: 0;
+    top: calc(100% + 24px); left: 0; right: 0;
     text-align: center;
     font-size: 12px;
     color: var(--muted);
@@ -176,7 +218,8 @@
     font-variant-numeric: tabular-nums;
     color: var(--ink);
   }
-  .times li { opacity: .78; }
+  .times li { opacity: .78; display: flex; flex-direction: column; align-items: center; }
+  .times small { font-size: 10px; color: var(--muted); letter-spacing: .03em; margin-top: 2px; }
   .times li.new { animation: bump .7s ease; opacity: 1; }
   .times .empty { color: var(--muted); font-size: 13px; opacity: 1; }
   .undo {
@@ -238,7 +281,8 @@
 
   @media (max-height: 640px) {
     .count .n { font-size: 66px; }
-    .press { width: min(56vw, 210px); }
+    .press { width: min(52vw, 196px); }
+    .timer .clock { font-size: 28px; }
   }
   @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
@@ -264,7 +308,13 @@
         </g>
         <path class="drop" d="M100 128 C 103 136, 106 142, 106 147 A 6 6 0 0 1 94 147 C 94 142, 97 136, 100 128 Z" fill="#fff"/>
       </svg>
-      <span class="hint" id="hint">Tryk for at registrere</span>
+      <svg class="track" viewBox="0 0 220 220" aria-hidden="true">
+        <circle class="bg" cx="110" cy="110" r="108"/>
+        <circle class="fg" id="arc" cx="110" cy="110" r="108" pathLength="1"/>
+        <g id="ticks"></g>
+      </svg>
+      <span class="hint" id="hint">Tryk for at starte</span>
+      <span class="timer" aria-live="off"><span class="clock" id="clock">0:00</span><span class="sub" id="sub">Tryk igen for at stoppe</span></span>
     </button>
   </main>
 
@@ -283,9 +333,14 @@
   const CEL = 'boobielicious.celebrated';
   const GOAL = 8;
   const KEEP_DAYS = 60;
+  const DUR = 'boobielicious.durations';   // { tidsstempel: sekunder }
+  const ACTIVE = 'boobielicious.active';    // { start, fired: [minutter] }
+  const MILESTONES = [10, 15, 25];          // minutter
+  const FULL = 25;                          // ringen er fuld ved 25 min
+  const MAX_SESSION = 3 * 3600e3;           // glemt timer lukkes efter 3 timer
 
   const $ = id => document.getElementById(id);
-  const els = { date: $('date'), n: $('n'), dots: $('dots'), press: $('press'), times: $('times'), undo: $('undo'), hint: $('hint'), cel: $('celebrate'), msg: $('message') };
+  const els = { date: $('date'), n: $('n'), dots: $('dots'), press: $('press'), times: $('times'), undo: $('undo'), hint: $('hint'), clock: $('clock'), sub: $('sub'), arc: $('arc'), ticks: $('ticks'), cel: $('celebrate'), msg: $('message') };
 
   const store = {
     get(k, fallback) { try { const v = localStorage.getItem(k); return v === null ? fallback : JSON.parse(v); } catch { return fallback; } },
@@ -325,12 +380,126 @@
       list.forEach((t, i) => {
         const li = document.createElement('li');
         li.textContent = fmtTime(t);
+        const sec = durations()[t];
+        if (sec) { const sm = document.createElement('small'); sm.textContent = Math.max(1, Math.round(sec / 60)) + ' min'; li.appendChild(sm); }
         if (opts.animate && i === count - 1) li.className = 'new';
         els.times.appendChild(li);
       });
     }
     els.undo.disabled = count === 0;
-    els.hint.style.opacity = count === 0 ? 1 : 0;
+    els.hint.style.opacity = count === 0 && !active() ? 1 : 0;
+  }
+
+  const durations = () => store.get(DUR, {});
+  const active = () => {
+    const a = store.get(ACTIVE, null);
+    if (a && Date.now() - a.start > MAX_SESSION) { store.set(ACTIVE, null); return null; }
+    return a;
+  };
+
+  // Lyd: bløde klokketoner bygget med Web Audio (ingen lydfiler)
+  let ctx = null;
+  function unlockAudio() {
+    try {
+      if ('audioSession' in navigator) navigator.audioSession.type = 'playback'; // spiller også med lydløs-knappen slået til
+      ctx = ctx || new (window.AudioContext || window.webkitAudioContext)();
+      if (ctx.state !== 'running') ctx.resume();
+    } catch {}
+  }
+  function chime(notes, { gain = .18, spacing = .42, decay = 2.2, wave = 'sine' } = {}) {
+    if (!ctx) return;
+    ctx.resume().then(() => {
+      const t0 = ctx.currentTime + .05;
+      const out = ctx.createGain(); out.gain.value = gain; out.connect(ctx.destination);
+      notes.forEach((f, i) => {
+        const t = t0 + i * spacing;
+        [[f, 1, wave], [f * 2, .22, 'sine'], [f * 3, .06, 'sine']].forEach(([freq, amp, type]) => {
+          const o = ctx.createOscillator(), g = ctx.createGain();
+          o.type = type; o.frequency.value = freq;
+          g.gain.setValueAtTime(0, t);
+          g.gain.linearRampToValueAtTime(amp, t + .015);
+          g.gain.exponentialRampToValueAtTime(.0001, t + decay);
+          o.connect(g).connect(out); o.start(t); o.stop(t + decay + .05);
+        });
+      });
+    }).catch(() => {});
+  }
+  const sounds = {
+    10: () => chime([659.25, 987.77], { gain: .16 }),                        // blød: to toner
+    15: () => chime([659.25, 783.99, 987.77], { gain: .18 }),                // blød: tre toner
+    25: () => chime([987.77, 783.99, 987.77, 783.99, 1318.5], { gain: .5, spacing: .3, decay: 1.6, wave: 'triangle' }) // tydelig
+  };
+
+  // Hold skærmen tændt mens der ammes, så lydene kan nå at spille
+  let wakeLock = null;
+  async function keepAwake(on) {
+    try {
+      if (on && 'wakeLock' in navigator && !wakeLock) { wakeLock = await navigator.wakeLock.request('screen'); wakeLock.addEventListener('release', () => { wakeLock = null; }); }
+      if (!on && wakeLock) { await wakeLock.release(); wakeLock = null; }
+    } catch {}
+  }
+
+  const R = 108;
+  [10, 15].forEach(m => {
+    const a = (m / FULL) * 2 * Math.PI;
+    const c = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    c.setAttribute('class', 'tick'); c.dataset.m = m;
+    c.setAttribute('cx', 110 + R * Math.cos(a)); c.setAttribute('cy', 110 + R * Math.sin(a)); c.setAttribute('r', 2.2);
+    els.ticks.appendChild(c);
+  });
+
+  let alarmTimer = null;
+  function startAlarm() {
+    stopAlarm();
+    document.body.classList.add('alarm');
+    els.sub.textContent = 'Er du vågen? Tryk et sted for at fortsætte';
+    sounds[25]();
+    let n = 0;
+    alarmTimer = setInterval(() => { if (++n > 6) return stopAlarm(true); sounds[25](); }, 20000);
+  }
+  function stopAlarm(keepText) {
+    clearInterval(alarmTimer); alarmTimer = null;
+    document.body.classList.remove('alarm');
+    if (!keepText) els.sub.textContent = 'Tryk igen for at stoppe';
+  }
+  document.addEventListener('pointerdown', e => {
+    unlockAudio(); // også når appen genåbnes midt i en amning
+    if (document.body.classList.contains('alarm') && !els.press.contains(e.target)) stopAlarm();
+  });
+
+  const fmtClock = ms => { const s = Math.floor(ms / 1000); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; };
+
+  function tick() {
+    const a = active();
+    document.body.classList.toggle('timing', !!a);
+    if (!a) { els.arc.style.strokeDasharray = '0 1'; return; }
+    const ms = Date.now() - a.start, min = ms / 60000;
+    els.clock.textContent = fmtClock(ms);
+    const f = Math.min(1, min / FULL);
+    els.arc.style.strokeDasharray = `${f} 1`;
+    [...els.ticks.children].forEach(c => c.classList.toggle('done', min >= +c.dataset.m));
+    for (const m of MILESTONES) {
+      if (min >= m && !a.fired.includes(m)) {
+        a.fired.push(m); store.set(ACTIVE, a);
+        if (m === 25) startAlarm(); else { sounds[m](); pulse(); }
+      }
+    }
+  }
+  setInterval(tick, 1000);
+
+  function pulse() { els.press.classList.remove('pulse'); void els.press.offsetWidth; els.press.classList.add('pulse'); }
+
+  function stopTimer() {
+    const a = active();
+    if (!a) return;
+    const d = durations();
+    d[a.start] = Math.round((Date.now() - a.start) / 1000);
+    const cutoff = Date.now() - KEEP_DAYS * 864e5;
+    Object.keys(d).forEach(k => { if (+k < cutoff) delete d[k]; });
+    store.set(DUR, d);
+    store.set(ACTIVE, null);
+    stopAlarm();
+    keepAwake(false);
   }
 
   let lastTap = 0;
@@ -338,12 +507,22 @@
     const now = Date.now();
     if (now - lastTap < 800) return; // undgå utilsigtede dobbelttryk
     lastTap = now;
+    unlockAudio();
+
+    if (active()) {          // anden tryk: stop tidtagning
+      stopTimer();
+      tick(); render();
+      return;
+    }
 
     const data = all().filter(t => t >= now - KEEP_DAYS * 864e5);
     data.push(now);
     store.set(KEY, data);
+    store.set(ACTIVE, { start: now, fired: [] });
+    keepAwake(true);
 
-    els.press.classList.remove('pulse'); void els.press.offsetWidth; els.press.classList.add('pulse');
+    pulse();
+    tick();
     render({ animate: true });
 
     if (today().length === GOAL && store.get(CEL, '') !== dayKey()) {
@@ -356,10 +535,13 @@
     const list = today();
     if (!list.length) return;
     const last = list[list.length - 1];
+    const a = active();
+    if (a && a.start === last) { store.set(ACTIVE, null); stopAlarm(); keepAwake(false); }
     const data = all();
     data.splice(data.lastIndexOf(last), 1);
     store.set(KEY, data);
-    render();
+    const d = durations(); delete d[last]; store.set(DUR, d);
+    tick(); render();
   });
 
   function celebrate() {
@@ -391,6 +573,18 @@
   setInterval(checkDay, 20000);
   document.addEventListener('visibilitychange', () => { if (!document.hidden) { checkDay(); render(); } });
 
+  // Genåbnet midt i en amning: spring milepæle over, der allerede er passeret
+  (() => {
+    const a = active();
+    if (!a) return;
+    const min = (Date.now() - a.start) / 60000;
+    a.fired = MILESTONES.filter(m => min >= m);
+    store.set(ACTIVE, a);
+    keepAwake(true);
+  })();
+  document.addEventListener('visibilitychange', () => { if (!document.hidden && active()) keepAwake(true); });
+
+  tick();
   render();
 
   if ('serviceWorker' in navigator) {
