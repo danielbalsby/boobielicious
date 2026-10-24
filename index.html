@@ -55,6 +55,8 @@
     --side-r: #7E8A72;
   }
   body { transition: background-color .8s ease, color .8s ease; }
+  :root[data-theme="night"] .wake { background: color-mix(in srgb, var(--areola) 16%, var(--bg)); }
+  :root[data-theme="night"] .warn { background: color-mix(in srgb, var(--areola) 12%, transparent); }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   html, body { height: 100%; }
   body {
