@@ -395,7 +395,23 @@
     margin-bottom: 8px;
     font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted);
   }
-  .strip-head b { font-weight: 500; color: var(--ink); letter-spacing: .04em; text-transform: none; font-size: 13px; font-variant-numeric: tabular-nums; }
+  .strip-head {
+    margin-bottom: 12px;
+    font-size: 12px; letter-spacing: .03em; text-transform: none; font-variant-numeric: tabular-nums;
+  }
+
+  /* Forsidens døgnlinje: rolig, én prik pr. amning, linjen fyldes som dagen går */
+  .dayline { position: relative; height: 12px; margin: 0 4px; }
+  .dayline::before, .dayline .done {
+    content: ""; position: absolute; left: 0; top: 50%; height: 1px; margin-top: -.5px;
+  }
+  .dayline::before { right: 0; background: var(--sand-deep); opacity: .55; }
+  .dayline .done { background: var(--muted); opacity: .45; }
+  .dayline .p {
+    position: absolute; top: 50%; width: 7px; height: 7px; margin: -3.5px 0 0 -3.5px;
+    border-radius: 50%; background: var(--areola); opacity: .7;
+  }
+  .dayline .p.live { animation: breathe 2.4s ease-in-out infinite; }
   .day { display: block; width: 100%; padding: 4px 0; text-align: left; }
   .since {
     margin-top: 14px;
@@ -607,9 +623,8 @@
 
   <footer>
     <button class="day" id="dayBtn" aria-label="I dag. Åbn historik">
-      <div class="strip-head"><span>I dag</span><b id="total"></b></div>
-      <div class="strip" id="strip"></div>
-      <div class="axis" aria-hidden="true"><span style="left:0">00</span><span style="left:25%">06</span><span style="left:50%">12</span><span style="left:75%">18</span><span style="left:100%">24</span></div>
+      <div class="strip-head"><span>I dag</span><span id="total"></span></div>
+      <div class="dayline" id="strip"></div>
     </button>
     <p class="since" id="since"></p>
     <div class="actions">

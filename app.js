@@ -128,7 +128,7 @@
     [...els.dots.children].forEach((d, i) => d.classList.toggle('on', i < count));
 
     renderSides();
-    drawStrip(els.strip, midnight());
+    drawDayline();
     renderTotal();
     renderSince();
     els.undo.disabled = count === 0;
@@ -156,9 +156,20 @@
     el.innerHTML = html;
   }
 
+  // Forsiden: kun prikker for tidspunkter, ingen varigheder
+  function drawDayline() {
+    const start = midnight(), len = nextDay(start) - start;
+    const pos = t => ((t - start) / len * 100).toFixed(2) + '%';
+    let html = `<i class="done" style="width:${pos(Date.now())}"></i>`;
+    inDay(start).forEach(f => {
+      html += `<i class="p s-${f.s ? f.s.slice(-1) : 'x'}${isLive(f) ? ' live' : ''}" style="left:${pos(f.t)}"></i>`;
+    });
+    els.strip.innerHTML = html;
+  }
+
   function renderTotal() {
     const ms = dayTotal(midnight());
-    els.total.textContent = ms ? fmtTotal(ms) + ' ammet' : '';
+    els.total.textContent = ms ? fmtTotal(ms) : '';
   }
 
   function renderSince() {
@@ -191,7 +202,7 @@
       if (f && !f.s.includes(side)) { f.s = (f.s + side).slice(-2); saveFeeds(list); flashSub(`Skiftet til ${SIDE[side]}`); }
     } else chosenSide = side;
     renderSides();
-    drawStrip(els.strip, midnight());
+    drawDayline();
   });
 
   // ---------- Tidtagning ----------
@@ -266,13 +277,13 @@
     document.body.classList.toggle('timing', !!a);
     if (!a) {
       els.arc.style.strokeDasharray = '0 1';
-      drawStrip(els.strip, midnight());
+      drawDayline();
       renderSince();
       return;
     }
     const ms = Date.now() - a.start, min = ms / 60000;
     if (ms > AUTO_STOP) { stopFeed({ unfinished: true }); return; }
-    drawStrip(els.strip, midnight());
+    drawDayline();
     renderTotal();
     els.clock.textContent = fmtClock(ms);
     els.arc.style.strokeDasharray = `${Math.min(1, min / FULL)} 1`;
