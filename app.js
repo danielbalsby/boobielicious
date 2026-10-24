@@ -24,7 +24,7 @@
   const els = {
     date: $('date'), n: $('n'), dots: $('dots'), sides: $('sides'), press: $('press'), hint: $('hint'),
     clock: $('clock'), sub: $('sub'), arc: $('arc'), ticks: $('ticks'),
-    strip: $('strip'), midLbl: $('midLbl'), total: $('total'), since: $('since'), undo: $('undo'), nudge: $('nudge'),
+    strip: $('strip'), marks: $('marks'), total: $('total'), since: $('since'), undo: $('undo'), nudge: $('nudge'),
     sheet: $('sheet'), seg: $('seg'), stats: $('stats'), days: $('days'), bars: $('bars'), chartAvg: $('chartAvg'), chartFrom: $('chartFrom'),
     settings: $('settings'), editor: $('editor'), wake: $('wake'), cel: $('celebrate'), msg: $('message'), celText: $('celText')
   };
@@ -168,17 +168,20 @@
       if (g && f.t - g.last < CLUSTER) { g.n++; g.last = f.t; g.live = g.live || isLive(f); }
       else groups.push({ first: f.t, last: f.t, n: 1, live: isLive(f) });
     });
-    let html = '';
-    const mid = midnight();                       // svag streg ved midnat
-    if (mid > from) html += `<i class="mid" style="left:${pos(mid)}"></i>`;
+    let html = '', labels = '';
+    // Pejlemærker: kl. 00, 06, 12 og 18 glider med, ligesom prikkerne
+    for (let t = dayStartOf(from); t <= now; t += 6 * 3600e3) {
+      const pct = (t - from) / WINDOW * 100;
+      if (pct <= 0 || pct >= 100) continue;
+      html += `<i class="mid" style="left:${pct.toFixed(2)}%"></i>`;
+      if (pct > 5 && pct < 90) labels += `<span style="left:${pct.toFixed(2)}%">${pad(new Date(t).getHours())}</span>`;
+    }
     groups.forEach(g => {
       const size = g.n === 1 ? 7 : g.n === 2 ? 10 : 12;
       html += `<i class="p${g.live ? ' live' : ''}" style="left:${pos((g.first + g.last) / 2)};width:${size}px;height:${size}px;margin:-${size / 2}px 0 0 -${size / 2}px"></i>`;
     });
     els.strip.innerHTML = html;
-    const midPct = (mid - from) / WINDOW * 100;
-    els.midLbl.hidden = midPct < 8 || midPct > 88;
-    els.midLbl.style.left = midPct.toFixed(2) + '%';
+    els.marks.innerHTML = labels;
   }
 
   function renderTotal() {
