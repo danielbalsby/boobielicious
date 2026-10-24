@@ -1,4 +1,4 @@
-const VERSION = 'boobielicious-v10';
+const VERSION = 'boobielicious-v11';
 const SHELL = ['./', 'index.html', 'app.js', 'sound.js', 'manifest.json', 'icons/icon.svg', 'icons/apple-touch-icon.png', 'icons/icon-192.png', 'icons/icon-512.png'];
 
 self.addEventListener('install', e => {
