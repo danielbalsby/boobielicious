@@ -31,6 +31,7 @@
     --skin: #F8D3CD;
     --areola: #EE7F98;
     --nipple: #B4475F;
+    --night: rgba(217, 202, 182, .28);
     --serif: "Cormorant Garamond", "Cormorant", Georgia, "Times New Roman", serif;
     --sans: "Inter", -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
   }
@@ -204,27 +205,61 @@
     transition: opacity .5s ease;
   }
 
-  footer { width: 100%; text-align: center; }
-  .times {
-    list-style: none;
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: 6px 16px;
-    max-width: 320px;
-    margin: 0 auto;
-    min-height: 20px;
-    font-size: 14px;
-    font-variant-numeric: tabular-nums;
-    color: var(--ink);
+  footer { width: 100%; max-width: 360px; text-align: center; }
+
+  /* Døgnlinje: 00–24 med en lille bjælke pr. amning (bredde = varighed) */
+  .strip {
+    position: relative;
+    height: 22px;
+    border-radius: 4px;
+    background: linear-gradient(to right,
+      var(--night) 0 25%, transparent 25% 91.667%, var(--night) 91.667% 100%);
   }
-  .times li { opacity: .78; display: flex; flex-direction: column; align-items: center; }
-  .times small { font-size: 10px; color: var(--muted); letter-spacing: .03em; margin-top: 2px; }
-  .times li.new { animation: bump .7s ease; opacity: 1; }
-  .times .empty { color: var(--muted); font-size: 13px; opacity: 1; }
-  .undo {
-    margin-top: 22px;
-    padding: 10px 14px;
+  .strip::before {           /* grundlinje */
+    content: ""; position: absolute; left: 0; right: 0; top: 50%;
+    height: 1px; background: var(--sand-deep); opacity: .7;
+  }
+  .strip .h {                /* små streger ved 06, 12, 18 */
+    position: absolute; top: 50%; width: 1px; height: 7px; margin-top: -3px;
+    background: var(--sand-deep);
+  }
+  .strip .b {
+    position: absolute; top: 4px; bottom: 4px;
+    min-width: 3px;
+    border-radius: 3px;
+    background: var(--areola);
+    opacity: .9;
+  }
+  .strip .b.live { animation: breathe 2.4s ease-in-out infinite; }
+  @keyframes breathe { 50% { opacity: .45; } }
+  .strip .now {
+    position: absolute; top: 1px; bottom: 1px; width: 1.5px; margin-left: -.75px;
+    background: var(--ink); opacity: .35; border-radius: 1px;
+  }
+  .axis {
+    position: relative; height: 12px;
+    margin-top: 6px;
+    font-size: 10px; color: var(--muted); letter-spacing: .04em;
+    font-variant-numeric: tabular-nums;
+  }
+  .axis span { position: absolute; transform: translateX(-50%); }
+  .axis span:first-child { transform: none; }
+  .axis span:last-child { transform: translateX(-100%); }
+  .day { display: block; width: 100%; padding: 4px 0; text-align: left; }
+  .since {
+    margin-top: 14px;
+    min-height: 18px;
+    font-size: 13px;
+    color: var(--muted);
+    letter-spacing: .02em;
+    transition: opacity .4s ease;
+  }
+  .since b { font-weight: 500; color: var(--ink); }
+  .timing .since { opacity: 0; }
+  .actions { margin-top: 10px; display: flex; justify-content: center; align-items: center; gap: 4px; }
+  .actions .sep { color: var(--sand-deep); }
+  .undo, .link {
+    padding: 10px 12px;
     font-size: 12px;
     color: var(--muted);
     letter-spacing: .04em;
@@ -233,7 +268,69 @@
     text-underline-offset: 4px;
     transition: opacity .3s ease;
   }
-  .undo:disabled { opacity: 0; pointer-events: none; }
+  .undo:disabled { opacity: .35; pointer-events: none; }
+
+  /* Historik */
+  .sheet {
+    position: fixed; inset: 0;
+    z-index: 20;
+    background: var(--bg);
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    transform: translateY(100%);
+    transition: transform .55s cubic-bezier(.2,.75,.2,1), visibility 0s linear .55s;
+    visibility: hidden;
+    padding:
+      calc(env(safe-area-inset-top) + 24px)
+      calc(env(safe-area-inset-right) + 24px)
+      calc(env(safe-area-inset-bottom) + 40px)
+      calc(env(safe-area-inset-left) + 24px);
+  }
+  .sheet.open { transform: none; visibility: visible; transition: transform .55s cubic-bezier(.2,.75,.2,1); }
+  .sheet-in { max-width: 420px; margin: 0 auto; }
+  .sheet-head { display: flex; align-items: baseline; justify-content: space-between; }
+  .sheet-head h2 { font-family: var(--serif); font-weight: 400; font-size: 40px; line-height: 1; }
+  .close { font-size: 13px; color: var(--muted); padding: 8px 0 8px 16px; letter-spacing: .04em; }
+  .seg {
+    display: inline-flex; margin-top: 22px; padding: 3px;
+    background: var(--sand); border-radius: 999px;
+  }
+  .seg button {
+    font-size: 12px; letter-spacing: .03em; color: var(--muted);
+    padding: 7px 14px; border-radius: 999px;
+    transition: background .3s ease, color .3s ease;
+  }
+  .seg button.on { background: var(--bg); color: var(--ink); box-shadow: 0 1px 2px rgba(59,50,43,.08); }
+  .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin: 28px 0 30px; }
+  .stats div { border-top: 1px solid var(--sand-deep); padding-top: 12px; }
+  .stats b { display: block; font-family: var(--serif); font-weight: 400; font-size: 32px; line-height: 1; font-variant-numeric: lining-nums; }
+  .stats b small { font-size: 15px; font-style: italic; color: var(--muted); margin-left: 2px; }
+  .stats span { display: block; margin-top: 6px; font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+  .grid { --lbl: 54px; --cnt: 26px; }
+  .grid .axis { margin: 0 calc(var(--cnt) + 12px) 8px calc(var(--lbl) + 12px); }
+  .days { list-style: none; }
+  .days li { border-top: 1px solid color-mix(in srgb, var(--sand-deep) 55%, transparent); }
+  .row {
+    width: 100%;
+    display: grid; grid-template-columns: var(--lbl) 1fr var(--cnt); gap: 12px; align-items: center;
+    padding: 11px 0; text-align: left;
+  }
+  .row .lbl { font-size: 12px; color: var(--muted); letter-spacing: .02em; white-space: nowrap; }
+  .row .cnt { font-family: var(--serif); font-size: 20px; text-align: right; font-variant-numeric: lining-nums; }
+  .row .strip { height: 18px; }
+  .row .strip .b { top: 3px; bottom: 3px; }
+  .days li.today .lbl { color: var(--ink); }
+  .detail {
+    display: none;
+    padding: 0 var(--cnt) 14px calc(var(--lbl) + 12px);
+    font-size: 12px; color: var(--muted);
+    line-height: 1.9;
+    font-variant-numeric: tabular-nums;
+  }
+  .detail span { white-space: nowrap; margin-right: 14px; }
+  .detail span em { font-style: normal; color: var(--ink); margin-right: 4px; }
+  .days li.open .detail { display: block; animation: bump .4s ease; }
+  .empty-log { margin-top: 40px; text-align: center; color: var(--muted); font-size: 13px; }
 
   /* Celebration */
   .celebrate {
@@ -319,10 +416,35 @@
   </main>
 
   <footer>
-    <ul class="times" id="times"></ul>
-    <button class="undo" id="undo" disabled>Fortryd seneste</button>
+    <button class="day" id="dayBtn" aria-label="I dag. Åbn historik">
+      <div class="strip" id="strip"></div>
+      <div class="axis" aria-hidden="true"><span style="left:0">00</span><span style="left:25%">06</span><span style="left:50%">12</span><span style="left:75%">18</span><span style="left:100%">24</span></div>
+    </button>
+    <p class="since" id="since"></p>
+    <div class="actions">
+      <button class="undo" id="undo" disabled>Fortryd seneste</button>
+      <span class="sep" aria-hidden="true">·</span>
+      <button class="link" id="logBtn">Historik</button>
+    </div>
   </footer>
 </div>
+
+<section class="sheet" id="sheet" aria-label="Historik" aria-hidden="true">
+  <div class="sheet-in">
+    <div class="sheet-head"><h2>Historik</h2><button class="close" id="closeLog">Luk</button></div>
+    <div class="seg" id="seg" role="tablist">
+      <button data-days="7" class="on">7 dage</button><button data-days="14">14 dage</button><button data-days="30">30 dage</button>
+    </div>
+    <div class="stats" id="stats"></div>
+    <div class="grid">
+      <div class="axis" aria-hidden="true"><span style="left:0">00</span><span style="left:25%">06</span><span style="left:50%">12</span><span style="left:75%">18</span><span style="left:100%">24</span></div>
+      <ol class="days" id="days"></ol>
+    </div>
+  </div>
+</section>
+
+<label id="haptic" aria-hidden="true" style="position:fixed;left:-100px;top:0;width:1px;height:1px;overflow:hidden;opacity:0"><input type="checkbox" switch tabindex="-1"></label>
+<audio id="player" playsinline preload="auto"></audio>
 
 <div class="celebrate" id="celebrate" aria-hidden="true"></div>
 <div class="message" id="message" role="status"><p><span class="big">Otte i dag.</span><span class="small">Du giver så meget. Hvil dig, når du kan.</span></p></div>
@@ -340,7 +462,7 @@
   const MAX_SESSION = 3 * 3600e3;           // glemt timer lukkes efter 3 timer
 
   const $ = id => document.getElementById(id);
-  const els = { date: $('date'), n: $('n'), dots: $('dots'), press: $('press'), times: $('times'), undo: $('undo'), hint: $('hint'), clock: $('clock'), sub: $('sub'), arc: $('arc'), ticks: $('ticks'), cel: $('celebrate'), msg: $('message') };
+  const els = { date: $('date'), n: $('n'), dots: $('dots'), press: $('press'), undo: $('undo'), strip: $('strip'), since: $('since'), sheet: $('sheet'), days: $('days'), stats: $('stats'), seg: $('seg'), hint: $('hint'), clock: $('clock'), sub: $('sub'), arc: $('arc'), ticks: $('ticks'), cel: $('celebrate'), msg: $('message') };
 
   const store = {
     get(k, fallback) { try { const v = localStorage.getItem(k); return v === null ? fallback : JSON.parse(v); } catch { return fallback; } },
@@ -370,27 +492,121 @@
     }
     [...els.dots.children].forEach((d, i) => d.classList.toggle('on', i < count));
 
-    els.times.innerHTML = '';
-    if (!count) {
-      const li = document.createElement('li');
-      li.className = 'empty';
-      li.textContent = 'Ingen amninger endnu i dag';
-      els.times.appendChild(li);
-    } else {
-      list.forEach((t, i) => {
-        const li = document.createElement('li');
-        li.textContent = fmtTime(t);
-        const sec = durations()[t];
-        if (sec) { const sm = document.createElement('small'); sm.textContent = Math.max(1, Math.round(sec / 60)) + ' min'; li.appendChild(sm); }
-        if (opts.animate && i === count - 1) li.className = 'new';
-        els.times.appendChild(li);
-      });
-    }
+    drawStrip(els.strip, midnight());
+    renderSince();
+    if (els.sheet.classList.contains('open')) renderLog();
     els.undo.disabled = count === 0;
     els.hint.style.opacity = count === 0 && !active() ? 1 : 0;
   }
 
   const durations = () => store.get(DUR, {});
+
+  // ---- Døgnlinje og historik ----
+  const dayStartOf = t => { const d = new Date(t); d.setHours(0, 0, 0, 0); return d.getTime(); };
+  const nextDay = t => { const d = new Date(t); d.setDate(d.getDate() + 1); return d.getTime(); };
+  const durMs = (t, dur, a) => dur[t] ? dur[t] * 1000 : (a && a.start === t ? Date.now() - t : 0);
+  const fmtSpan = ms => {
+    const m = Math.round(ms / 60000);
+    if (m < 60) return `${m} min`;
+    const h = Math.floor(m / 60), r = m % 60;
+    return r ? `${h} t ${r} min` : `${h} t`;
+  };
+
+  function drawStrip(el, start) {
+    const end = nextDay(start), len = end - start, now = Date.now();
+    const dur = durations(), a = active();
+    let html = [25, 50, 75].map(p => `<i class="h" style="left:${p}%"></i>`).join('');
+    all().filter(t => t >= start && t < end).forEach(t => {
+      const left = (t - start) / len * 100;
+      const w = Math.min(100 - left, durMs(t, dur, a) / len * 100);
+      html += `<i class="b${a && a.start === t ? ' live' : ''}" style="left:${left.toFixed(3)}%;width:${w.toFixed(3)}%"></i>`;
+    });
+    if (now >= start && now < end) html += `<i class="now" style="left:${((now - start) / len * 100).toFixed(3)}%"></i>`;
+    el.innerHTML = html;
+  }
+
+  function renderSince() {
+    const list = all();
+    if (!list.length) { els.since.textContent = 'Tryk på brystet, når I begynder'; return; }
+    const last = list[list.length - 1], dur = durations()[last];
+    const ago = Date.now() - last - (dur ? dur * 1000 : 0);   // regnet fra amningen sluttede
+    els.since.innerHTML = ago < 60000
+      ? 'Sidst ammet <b>lige nu</b>'
+      : `Sidst ammet for <b>${fmtSpan(ago)}</b> siden`;
+  }
+
+  let logDays = 7;
+  function dayLabel(start) {
+    const t = midnight();
+    if (start === t) return 'I dag';
+    if (start === dayStartOf(t - 1)) return 'I går';
+    const d = new Date(start);
+    return d.toLocaleDateString('da-DK', { weekday: 'short' }).replace('.', '') + ' ' + d.getDate() + '.';
+  }
+
+  function renderLog() {
+    const dur = durations(), feeds = all(), a = active();
+    const starts = [];
+    let s0 = midnight();
+    for (let i = 0; i < logDays; i++) { starts.push(s0); s0 = dayStartOf(s0 - 1); }
+    const from = starts[starts.length - 1];
+    const inRange = feeds.filter(t => t >= from);
+
+    // Nøgletal: hele døgn (i dag tæller kun med, hvis der ikke er andre data)
+    const fullDays = starts.slice(1).filter(s => feeds.some(t => t >= s && t < nextDay(s)));
+    const perDay = fullDays.length
+      ? fullDays.reduce((n, s) => n + feeds.filter(t => t >= s && t < nextDay(s)).length, 0) / fullDays.length
+      : feeds.filter(t => t >= midnight()).length;
+    const durs = inRange.map(t => dur[t]).filter(Boolean);
+    const avgDur = durs.length ? durs.reduce((x, y) => x + y, 0) / durs.length / 60 : 0;
+    const gaps = [];
+    for (let i = 1; i < inRange.length; i++) {
+      const g = inRange[i] - inRange[i - 1] - (dur[inRange[i - 1]] || 0) * 1000;
+      if (g > 0 && g < 12 * 3600e3) gaps.push(g);
+    }
+    const avgGap = gaps.length ? gaps.reduce((x, y) => x + y, 0) / gaps.length : 0;
+    const gapH = Math.floor(avgGap / 3600e3), gapM = Math.round(avgGap % 3600e3 / 60000);
+    const fmtNum = n => n.toLocaleString('da-DK', { maximumFractionDigits: 1 });
+    els.stats.innerHTML =
+      `<div><b>${inRange.length ? fmtNum(perDay) : '–'}</b><span>Pr. døgn</span></div>` +
+      `<div><b>${avgDur ? Math.round(avgDur) + '<small>min</small>' : '–'}</b><span>Varighed</span></div>` +
+      `<div><b>${avgGap ? `${gapH}<small>t</small> ${gapM}<small>m</small>` : '–'}</b><span>Mellem</span></div>`;
+
+    const open = new Set([...els.days.querySelectorAll('li.open')].map(li => li.dataset.start));
+    els.days.innerHTML = '';
+    starts.forEach((start, i) => {
+      const list = feeds.filter(t => t >= start && t < nextDay(start));
+      const li = document.createElement('li');
+      li.dataset.start = start;
+      if (i === 0) li.classList.add('today');
+      if (open.has(String(start))) li.classList.add('open');
+      li.innerHTML = `<button class="row" aria-label="${dayLabel(start)}: ${list.length} amninger"><span class="lbl">${dayLabel(start)}</span><span class="strip"></span><span class="cnt">${list.length || ''}</span></button>` +
+        `<div class="detail">${list.map(t => `<span><em>${fmtTime(t)}</em>${dur[t] ? Math.max(1, Math.round(dur[t] / 60)) + ' min' : (a && a.start === t ? 'i gang' : '')}</span>`).join('') || 'Ingen registreringer'}</div>`;
+      drawStrip(li.querySelector('.strip'), start);
+      li.querySelector('.row').addEventListener('click', () => li.classList.toggle('open'));
+      els.days.appendChild(li);
+    });
+  }
+
+  function openLog() {
+    renderLog();
+    els.sheet.classList.add('open');
+    els.sheet.setAttribute('aria-hidden', 'false');
+    els.sheet.scrollTop = 0;
+  }
+  function closeLog() {
+    els.sheet.classList.remove('open');
+    els.sheet.setAttribute('aria-hidden', 'true');
+  }
+  $('logBtn').addEventListener('click', openLog);
+  $('dayBtn').addEventListener('click', openLog);
+  $('closeLog').addEventListener('click', closeLog);
+  els.seg.addEventListener('click', e => {
+    const b = e.target.closest('button'); if (!b) return;
+    logDays = +b.dataset.days;
+    [...els.seg.children].forEach(x => x.classList.toggle('on', x === b));
+    renderLog();
+  });
   const active = () => {
     const a = store.get(ACTIVE, null);
     if (a && Date.now() - a.start > MAX_SESSION) { store.set(ACTIVE, null); return null; }
@@ -501,20 +717,78 @@
   })();
   window.BoobieSound = Sound; // til test
 
-  let ctx = null, eng = null;
+  // Afspilning: lydene renderes én gang til små WAV-filer og spilles gennem et <audio>-element.
+  // Lydfiler i et medieelement spiller på iPhone, også når lydløs-knappen er slået til.
+  // Web Audio bruges kun som reserve.
+  const player = $('player');
+  const clips = {};
+  let unlocked = false, ctx = null, eng = null;
+
+  function toWav(b) {
+    const ch = b.numberOfChannels, len = b.length, sr = b.sampleRate;
+    const buf = new ArrayBuffer(44 + len * ch * 2), v = new DataView(buf);
+    const w = (o, str) => [...str].forEach((c, i) => v.setUint8(o + i, c.charCodeAt(0)));
+    w(0, 'RIFF'); v.setUint32(4, 36 + len * ch * 2, true); w(8, 'WAVEfmt ');
+    v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, ch, true);
+    v.setUint32(24, sr, true); v.setUint32(28, sr * ch * 2, true); v.setUint16(32, ch * 2, true); v.setUint16(34, 16, true);
+    w(36, 'data'); v.setUint32(40, len * ch * 2, true);
+    const data = [...Array(ch)].map((_, i) => b.getChannelData(i));
+    for (let i = 0, o = 44; i < len; i++) for (let c = 0; c < ch; c++, o += 2) v.setInt16(o, Math.max(-1, Math.min(1, data[c][i])) * 32767, true);
+    return URL.createObjectURL(new Blob([buf], { type: 'audio/wav' }));
+  }
+  async function renderClips() {
+    const OAC = window.OfflineAudioContext || window.webkitOfflineAudioContext;
+    if (!OAC) return;
+    for (const [name, secs] of [[10, 5], [15, 6], [25, 8]]) {
+      try {
+        const oc = new OAC(2, 44100 * secs, 44100);
+        Sound.patterns[name](Sound.engine(oc), .05);
+        clips[name] = toWav(await oc.startRendering());
+      } catch {}
+    }
+    const oc = new OAC(1, 4410, 44100);   // 0,1 s stilhed til at låse afspilleren op
+    clips.silence = toWav(await oc.startRendering());
+  }
+  renderClips();
+
   function unlockAudio() {
+    try { if ('audioSession' in navigator) navigator.audioSession.type = 'playback'; } catch {}
+    if (!unlocked && clips.silence) {
+      player.src = clips.silence;
+      player.play().then(() => { unlocked = true; }).catch(() => {});
+    }
     try {
-      if ('audioSession' in navigator) navigator.audioSession.type = 'playback'; // spiller også med lydløs-knappen slået til
       ctx = ctx || new (window.AudioContext || window.webkitAudioContext)();
       eng = eng || Sound.engine(ctx);
-      if (ctx.state !== 'running') ctx.resume();
     } catch {}
   }
   function play(name) {
+    if (clips[name]) {
+      player.src = clips[name];
+      player.currentTime = 0;
+      player.play().catch(() => playWebAudio(name));
+    } else playWebAudio(name);
+  }
+  function playWebAudio(name) {
     if (!ctx || !eng) return;
     ctx.resume().then(() => Sound.patterns[name](eng, ctx.currentTime + .06)).catch(() => {});
   }
-  const sounds = { 10: () => play(10), 15: () => play(15), 25: () => play(25) };
+
+  // Haptik: Android har vibrate(). iPhone (iOS 18+) giver et lille tryk, når en skjult kontakt slås om.
+  const hapticLabel = $('haptic');
+  function haptic(pattern) {
+    if (navigator.vibrate) { navigator.vibrate(pattern); return; }
+    let t = 0;
+    pattern.forEach((ms, i) => {
+      if (i % 2 === 0) for (let k = 0; k < Math.max(1, Math.round(ms / 60)); k++) setTimeout(() => hapticLabel.click(), t + k * 60);
+      t += ms;
+    });
+  }
+  const sounds = {
+    10: () => { play(10); haptic([60, 260, 60]); },
+    15: () => { play(15); haptic([60, 200, 60, 200, 60]); },
+    25: () => { play(25); haptic([300, 150, 300, 150, 300, 400, 300, 150, 300, 150, 300]); }
+  };
 
   // Hold skærmen tændt mens der ammes, så lydene kan nå at spille
   let wakeLock = null;
@@ -558,7 +832,8 @@
   function tick() {
     const a = active();
     document.body.classList.toggle('timing', !!a);
-    if (!a) { els.arc.style.strokeDasharray = '0 1'; return; }
+    if (!a) { els.arc.style.strokeDasharray = '0 1'; renderSince(); drawStrip(els.strip, midnight()); return; }
+    drawStrip(els.strip, midnight());
     const ms = Date.now() - a.start, min = ms / 60000;
     els.clock.textContent = fmtClock(ms);
     const f = Math.min(1, min / FULL);
@@ -594,6 +869,7 @@
     if (now - lastTap < 800) return; // undgå utilsigtede dobbelttryk
     lastTap = now;
     unlockAudio();
+    haptic([30]);
 
     if (active()) {          // anden tryk: stop tidtagning
       stopTimer();
