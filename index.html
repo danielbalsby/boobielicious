@@ -193,8 +193,44 @@
     color: var(--muted);
     letter-spacing: .04em;
   }
-  .alarm .timer .sub { color: var(--nipple); }
-  .alarm .ring { animation: ring 1.6s cubic-bezier(.2,.7,.2,1) infinite !important; }
+  /* Sikkerhedsalarm: fylder skærmen og skal slukkes aktivt */
+  .wake {
+    position: fixed; inset: 0; z-index: 30;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    padding: calc(env(safe-area-inset-top) + 24px) 32px calc(env(safe-area-inset-bottom) + 32px);
+    background: color-mix(in srgb, var(--skin) 70%, var(--bg));
+    text-align: center;
+    opacity: 0; visibility: hidden;
+    transition: opacity .6s ease, visibility 0s linear .6s;
+  }
+  .alarm .wake { opacity: 1; visibility: visible; transition: opacity .6s ease; }
+  .wake .orb {
+    position: relative; width: 120px; height: 120px; border-radius: 50%;
+    background: var(--areola);
+    animation: orb 1.6s ease-in-out infinite;
+  }
+  .wake .orb::before, .wake .orb::after {
+    content: ""; position: absolute; inset: 0; border-radius: 50%;
+    border: 1.5px solid var(--areola);
+    animation: ring 1.6s cubic-bezier(.2,.7,.2,1) infinite;
+  }
+  .wake .orb::after { animation-delay: .5s; }
+  .wake .orb i { position: absolute; inset: 34%; border-radius: 50%; background: var(--nipple); }
+  @keyframes orb { 50% { transform: scale(1.06); } }
+  .wake h2 { margin-top: 44px; font-family: var(--serif); font-weight: 400; font-style: italic; font-size: 44px; line-height: 1.05; }
+  .wake p { margin-top: 10px; font-size: 14px; color: var(--muted); }
+  .wake .awake {
+    margin-top: 44px;
+    width: 100%; max-width: 300px;
+    padding: 20px 24px;
+    border-radius: 999px;
+    background: var(--nipple); color: #fff;
+    font-size: 16px; font-weight: 500; letter-spacing: .03em;
+    box-shadow: 0 8px 24px rgba(180, 71, 95, .28);
+    transition: transform .2s ease;
+  }
+  .wake .awake:active { transform: scale(.97); }
+  .wake .end { margin-top: 14px; padding: 12px; font-size: 13px; color: var(--muted); text-decoration: underline; text-decoration-color: var(--sand-deep); text-underline-offset: 4px; }
   .hint {
     position: absolute;
     top: calc(100% + 24px); left: 0; right: 0;
@@ -449,6 +485,14 @@
       <ol class="days" id="days"></ol>
     </div>
   </div>
+</section>
+
+<section class="wake" id="wake" role="alertdialog" aria-labelledby="wakeTitle" aria-hidden="true">
+  <div class="orb"><i></i></div>
+  <h2 id="wakeTitle">Er du vågen?</h2>
+  <p id="wakeText">Der er gået 25 minutter.</p>
+  <button class="awake" id="awakeBtn">Jeg er vågen</button>
+  <button class="end" id="endBtn">Afslut amningen</button>
 </section>
 
 <label id="haptic" aria-hidden="true" style="position:fixed;left:-100px;top:0;width:1px;height:1px;overflow:hidden;opacity:0"><input type="checkbox" switch tabindex="-1"></label>
@@ -843,24 +887,25 @@
     els.ticks.appendChild(c);
   });
 
+  // Sikkerhedsalarm: lyder igen og igen, indtil Thea aktivt trykker "Jeg er vågen"
+  const wake = $('wake');
   let alarmTimer = null;
   function startAlarm() {
-    stopAlarm();
+    clearInterval(alarmTimer);
     document.body.classList.add('alarm');
-    els.sub.textContent = 'Er du vågen? Tryk et sted for at fortsætte';
+    wake.setAttribute('aria-hidden', 'false');
     sounds[25]();
-    let n = 0;
-    alarmTimer = setInterval(() => { if (++n > 6) return stopAlarm(true); sounds[25](); }, 20000);
+    alarmTimer = setInterval(() => sounds[25](), 9000);   // lydklippet er 8 s
   }
-  function stopAlarm(keepText) {
+  function stopAlarm() {
     clearInterval(alarmTimer); alarmTimer = null;
     document.body.classList.remove('alarm');
-    if (!keepText) els.sub.textContent = 'Tryk igen for at stoppe';
+    wake.setAttribute('aria-hidden', 'true');
+    try { player.pause(); } catch {}
   }
-  document.addEventListener('pointerdown', e => {
-    unlockAudio(); // også når appen genåbnes midt i en amning
-    if (document.body.classList.contains('alarm') && !els.press.contains(e.target)) stopAlarm();
-  });
+  $('awakeBtn').addEventListener('click', () => { haptic([30]); stopAlarm(); });
+  $('endBtn').addEventListener('click', () => { haptic([30]); stopTimer(); tick(); render(); });
+  document.addEventListener('pointerdown', () => unlockAudio()); // også når appen genåbnes midt i en amning
 
   const fmtClock = ms => { const s = Math.floor(ms / 1000); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; };
 
