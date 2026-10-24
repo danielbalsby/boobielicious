@@ -245,6 +245,12 @@
   .axis span { position: absolute; transform: translateX(-50%); }
   .axis span:first-child { transform: none; }
   .axis span:last-child { transform: translateX(-100%); }
+  .strip-head {
+    display: flex; justify-content: space-between; align-items: baseline;
+    margin-bottom: 8px;
+    font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted);
+  }
+  .strip-head b { font-weight: 500; color: var(--ink); letter-spacing: .04em; text-transform: none; font-size: 13px; font-variant-numeric: tabular-nums; }
   .day { display: block; width: 100%; padding: 4px 0; text-align: left; }
   .since {
     margin-top: 14px;
@@ -301,12 +307,12 @@
     transition: background .3s ease, color .3s ease;
   }
   .seg button.on { background: var(--bg); color: var(--ink); box-shadow: 0 1px 2px rgba(59,50,43,.08); }
-  .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin: 28px 0 30px; }
+  .stats { display: grid; grid-template-columns: repeat(2, 1fr); gap: 22px 16px; margin: 28px 0 30px; }
   .stats div { border-top: 1px solid var(--sand-deep); padding-top: 12px; }
   .stats b { display: block; font-family: var(--serif); font-weight: 400; font-size: 32px; line-height: 1; font-variant-numeric: lining-nums; }
   .stats b small { font-size: 15px; font-style: italic; color: var(--muted); margin-left: 2px; }
   .stats span { display: block; margin-top: 6px; font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
-  .grid { --lbl: 54px; --cnt: 26px; }
+  .grid { --lbl: 54px; --cnt: 52px; }
   .grid .axis { margin: 0 calc(var(--cnt) + 12px) 8px calc(var(--lbl) + 12px); }
   .days { list-style: none; }
   .days li { border-top: 1px solid color-mix(in srgb, var(--sand-deep) 55%, transparent); }
@@ -316,7 +322,8 @@
     padding: 11px 0; text-align: left;
   }
   .row .lbl { font-size: 12px; color: var(--muted); letter-spacing: .02em; white-space: nowrap; }
-  .row .cnt { font-family: var(--serif); font-size: 20px; text-align: right; font-variant-numeric: lining-nums; }
+  .row .cnt { font-family: var(--serif); font-size: 20px; line-height: 1; text-align: right; font-variant-numeric: lining-nums; }
+  .row .cnt small { display: block; margin-top: 3px; font-family: var(--sans); font-size: 10px; color: var(--muted); letter-spacing: .02em; white-space: nowrap; font-variant-numeric: tabular-nums; }
   .row .strip { height: 18px; }
   .row .strip .b { top: 3px; bottom: 3px; }
   .days li.today .lbl { color: var(--ink); }
@@ -417,6 +424,7 @@
 
   <footer>
     <button class="day" id="dayBtn" aria-label="I dag. Åbn historik">
+      <div class="strip-head"><span>I dag</span><b id="total"></b></div>
       <div class="strip" id="strip"></div>
       <div class="axis" aria-hidden="true"><span style="left:0">00</span><span style="left:25%">06</span><span style="left:50%">12</span><span style="left:75%">18</span><span style="left:100%">24</span></div>
     </button>
@@ -462,7 +470,7 @@
   const MAX_SESSION = 3 * 3600e3;           // glemt timer lukkes efter 3 timer
 
   const $ = id => document.getElementById(id);
-  const els = { date: $('date'), n: $('n'), dots: $('dots'), press: $('press'), undo: $('undo'), strip: $('strip'), since: $('since'), sheet: $('sheet'), days: $('days'), stats: $('stats'), seg: $('seg'), hint: $('hint'), clock: $('clock'), sub: $('sub'), arc: $('arc'), ticks: $('ticks'), cel: $('celebrate'), msg: $('message') };
+  const els = { date: $('date'), n: $('n'), dots: $('dots'), press: $('press'), undo: $('undo'), strip: $('strip'), since: $('since'), total: $('total'), sheet: $('sheet'), days: $('days'), stats: $('stats'), seg: $('seg'), hint: $('hint'), clock: $('clock'), sub: $('sub'), arc: $('arc'), ticks: $('ticks'), cel: $('celebrate'), msg: $('message') };
 
   const store = {
     get(k, fallback) { try { const v = localStorage.getItem(k); return v === null ? fallback : JSON.parse(v); } catch { return fallback; } },
@@ -525,7 +533,30 @@
     el.innerHTML = html;
   }
 
+  // Samlet ammetid for et døgn, inkl. en igangværende amning
+  function dayTotal(start) {
+    const end = nextDay(start), dur = durations(), a = active();
+    return all().filter(t => t >= start && t < end).reduce((sum, t) => sum + durMs(t, dur, a), 0);
+  }
+  const fmtTotal = ms => {
+    const m = Math.floor(ms / 60000);
+    if (!m) return ms ? '< 1 min' : '';
+    const h = Math.floor(m / 60), r = m % 60;
+    return h ? `${h} t ${String(r).padStart(2, '0')} min` : `${m} min`;
+  };
+  const fmtTotalShort = ms => {
+    const m = Math.round(ms / 60000);
+    if (!m) return '';
+    const h = Math.floor(m / 60), r = m % 60;
+    return h ? `${h} t ${String(r).padStart(2, '0')}` : `${m} min`;
+  };
+  function renderTotal() {
+    const ms = dayTotal(midnight());
+    els.total.textContent = ms ? fmtTotal(ms) + ' ammet' : '';
+  }
+
   function renderSince() {
+    renderTotal();
     const list = all();
     if (!list.length) { els.since.textContent = 'Tryk på brystet, når I begynder'; return; }
     const last = list[list.length - 1], dur = durations()[last];
@@ -565,12 +596,16 @@
       if (g > 0 && g < 12 * 3600e3) gaps.push(g);
     }
     const avgGap = gaps.length ? gaps.reduce((x, y) => x + y, 0) / gaps.length : 0;
+    const totals = (fullDays.length ? fullDays : [midnight()]).map(dayTotal).filter(Boolean);
+    const avgTotal = totals.length ? totals.reduce((x, y) => x + y, 0) / totals.length : 0;
+    const totH = Math.floor(avgTotal / 3600e3), totM = Math.round(avgTotal % 3600e3 / 60000);
     const gapH = Math.floor(avgGap / 3600e3), gapM = Math.round(avgGap % 3600e3 / 60000);
     const fmtNum = n => n.toLocaleString('da-DK', { maximumFractionDigits: 1 });
     els.stats.innerHTML =
       `<div><b>${inRange.length ? fmtNum(perDay) : '–'}</b><span>Pr. døgn</span></div>` +
-      `<div><b>${avgDur ? Math.round(avgDur) + '<small>min</small>' : '–'}</b><span>Varighed</span></div>` +
-      `<div><b>${avgGap ? `${gapH}<small>t</small> ${gapM}<small>m</small>` : '–'}</b><span>Mellem</span></div>`;
+      `<div><b>${avgTotal ? `${totH}<small>t</small> ${totM}<small>m</small>` : '–'}</b><span>Ammetid pr. døgn</span></div>` +
+      `<div><b>${avgDur ? Math.round(avgDur) + '<small>min</small>' : '–'}</b><span>Varighed pr. amning</span></div>` +
+      `<div><b>${avgGap ? `${gapH}<small>t</small> ${gapM}<small>m</small>` : '–'}</b><span>Mellem amninger</span></div>`;
 
     const open = new Set([...els.days.querySelectorAll('li.open')].map(li => li.dataset.start));
     els.days.innerHTML = '';
@@ -580,7 +615,7 @@
       li.dataset.start = start;
       if (i === 0) li.classList.add('today');
       if (open.has(String(start))) li.classList.add('open');
-      li.innerHTML = `<button class="row" aria-label="${dayLabel(start)}: ${list.length} amninger"><span class="lbl">${dayLabel(start)}</span><span class="strip"></span><span class="cnt">${list.length || ''}</span></button>` +
+      li.innerHTML = `<button class="row" aria-label="${dayLabel(start)}: ${list.length} amninger, ${fmtTotal(dayTotal(start)) || 'ingen ammetid'}"><span class="lbl">${dayLabel(start)}</span><span class="strip"></span><span class="cnt">${list.length || ''}<small>${fmtTotalShort(dayTotal(start))}</small></span></button>` +
         `<div class="detail">${list.map(t => `<span><em>${fmtTime(t)}</em>${dur[t] ? Math.max(1, Math.round(dur[t] / 60)) + ' min' : (a && a.start === t ? 'i gang' : '')}</span>`).join('') || 'Ingen registreringer'}</div>`;
       drawStrip(li.querySelector('.strip'), start);
       li.querySelector('.row').addEventListener('click', () => li.classList.toggle('open'));
@@ -834,6 +869,7 @@
     document.body.classList.toggle('timing', !!a);
     if (!a) { els.arc.style.strokeDasharray = '0 1'; renderSince(); drawStrip(els.strip, midnight()); return; }
     drawStrip(els.strip, midnight());
+    renderTotal();
     const ms = Date.now() - a.start, min = ms / 60000;
     els.clock.textContent = fmtClock(ms);
     const f = Math.min(1, min / FULL);
