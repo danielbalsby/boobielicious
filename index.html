@@ -402,16 +402,21 @@
 
   /* Forsidens døgnlinje: rolig, én prik pr. amning, linjen fyldes som dagen går */
   .dayline { position: relative; height: 12px; margin: 0 4px; }
-  .dayline::before, .dayline .done {
+  .dayline::before {
     content: ""; position: absolute; left: 0; top: 50%; height: 1px; margin-top: -.5px;
   }
   .dayline::before { right: 0; background: var(--sand-deep); opacity: .55; }
-  .dayline .done { background: var(--muted); opacity: .45; }
   .dayline .p {
     position: absolute; top: 50%; width: 7px; height: 7px; margin: -3.5px 0 0 -3.5px;
     border-radius: 50%; background: var(--areola); opacity: .7;
   }
   .dayline .p.live { animation: breathe 2.4s ease-in-out infinite; }
+  .dayline .mid { position: absolute; top: 50%; width: 1px; height: 9px; margin: -4.5px 0 0 -.5px; background: var(--sand-deep); }
+  .dayline-lbl { position: relative; height: 12px; margin: 6px 4px 0; font-size: 10px; color: var(--muted); letter-spacing: .04em; opacity: .8; }
+  .dayline-lbl span { position: absolute; top: 0; transform: translateX(-50%); }
+  .dayline-lbl .now-lbl { right: 0; transform: none; }
+  .strip-head { transition: opacity .5s ease; }
+  .timing .strip-head { opacity: 0; }
   .day { display: block; width: 100%; padding: 4px 0; text-align: left; }
   .since {
     margin-top: 14px;
@@ -622,9 +627,10 @@
   </main>
 
   <footer>
-    <button class="day" id="dayBtn" aria-label="I dag. Åbn historik">
-      <div class="strip-head"><span>I dag</span><span id="total"></span></div>
+    <button class="day" id="dayBtn" aria-label="Seneste døgn. Åbn historik">
+      <div class="strip-head"><span>Seneste døgn</span><span id="total"></span></div>
       <div class="dayline" id="strip"></div>
+      <div class="dayline-lbl" aria-hidden="true"><span id="midLbl">00</span><span class="now-lbl">nu</span></div>
     </button>
     <p class="since" id="since"></p>
     <div class="actions">

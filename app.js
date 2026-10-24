@@ -24,7 +24,7 @@
   const els = {
     date: $('date'), n: $('n'), dots: $('dots'), sides: $('sides'), press: $('press'), hint: $('hint'),
     clock: $('clock'), sub: $('sub'), arc: $('arc'), ticks: $('ticks'),
-    strip: $('strip'), total: $('total'), since: $('since'), undo: $('undo'), nudge: $('nudge'),
+    strip: $('strip'), midLbl: $('midLbl'), total: $('total'), since: $('since'), undo: $('undo'), nudge: $('nudge'),
     sheet: $('sheet'), seg: $('seg'), stats: $('stats'), days: $('days'), bars: $('bars'), chartAvg: $('chartAvg'), chartFrom: $('chartFrom'),
     settings: $('settings'), editor: $('editor'), wake: $('wake'), cel: $('celebrate'), msg: $('message'), celText: $('celText')
   };
@@ -156,19 +156,34 @@
     el.innerHTML = html;
   }
 
-  // Forsiden: kun prikker for tidspunkter, ingen varigheder
+  // Forsiden: de seneste 24 timer, højre ende er "nu". Én prik pr. amning;
+  // amninger tæt på hinanden samles til én lidt større prik.
+  const WINDOW = 24 * 3600e3, CLUSTER = 45 * 60e3;
   function drawDayline() {
-    const start = midnight(), len = nextDay(start) - start;
-    const pos = t => ((t - start) / len * 100).toFixed(2) + '%';
-    let html = `<i class="done" style="width:${pos(Date.now())}"></i>`;
-    inDay(start).forEach(f => {
-      html += `<i class="p s-${f.s ? f.s.slice(-1) : 'x'}${isLive(f) ? ' live' : ''}" style="left:${pos(f.t)}"></i>`;
+    const now = Date.now(), from = now - WINDOW;
+    const pos = t => ((t - from) / WINDOW * 100).toFixed(2) + '%';
+    const groups = [];
+    feeds().filter(f => f.t >= from && f.t <= now).forEach(f => {
+      const g = groups[groups.length - 1];
+      if (g && f.t - g.last < CLUSTER) { g.n++; g.last = f.t; g.live = g.live || isLive(f); }
+      else groups.push({ first: f.t, last: f.t, n: 1, live: isLive(f) });
+    });
+    let html = '';
+    const mid = midnight();                       // svag streg ved midnat
+    if (mid > from) html += `<i class="mid" style="left:${pos(mid)}"></i>`;
+    groups.forEach(g => {
+      const size = g.n === 1 ? 7 : g.n === 2 ? 10 : 12;
+      html += `<i class="p${g.live ? ' live' : ''}" style="left:${pos((g.first + g.last) / 2)};width:${size}px;height:${size}px;margin:-${size / 2}px 0 0 -${size / 2}px"></i>`;
     });
     els.strip.innerHTML = html;
+    const midPct = (mid - from) / WINDOW * 100;
+    els.midLbl.hidden = midPct < 8 || midPct > 88;
+    els.midLbl.style.left = midPct.toFixed(2) + '%';
   }
 
   function renderTotal() {
-    const ms = dayTotal(midnight());
+    const from = Date.now() - WINDOW;
+    const ms = feeds().filter(f => f.t >= from).reduce((sum, f) => sum + durMs(f), 0);
     els.total.textContent = ms ? fmtTotal(ms) : '';
   }
 
