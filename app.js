@@ -1,8 +1,9 @@
-// Boobielicious – amme-tæller
+// Amme Tid – amme-tæller
 (() => {
   'use strict';
   const { cue, unlockAudio, haptic, stopSound } = window.Boobie;
 
+  // Nøglerne bærer appens gamle navn, så eksisterende data stadig findes
   const K = {
     feeds: 'boobielicious.v2.feeds',     // [{ t, d, s, u }] – t: start (ms), d: varighed (s) eller null, s: side ('L','R','LR','RL',''), u: 1 hvis ikke stoppet
     active: 'boobielicious.active',      // { start, fired: [minutter] }
@@ -574,12 +575,12 @@
   function markBackup() { store.set(K.backup, Date.now()); renderBackupInfo(); els.nudge.hidden = true; backupStatus.textContent = 'Backup gemt.'; }
 
   $('exportBtn').addEventListener('click', async () => {
-    const data = { app: 'boobielicious', version: 2, exported: new Date().toISOString(), feeds: feeds(), settings: store.get(K.settings, {}) };
-    const name = `boobielicious-backup-${dayKey()}.json`;
+    const data = { app: 'ammetid', version: 2, exported: new Date().toISOString(), feeds: feeds(), settings: store.get(K.settings, {}) };
+    const name = `amme-tid-backup-${dayKey()}.json`;
     const blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
     const file = new File([blob], name, { type: 'application/json' });
     if (navigator.canShare && navigator.canShare({ files: [file] })) {
-      try { await navigator.share({ files: [file], title: 'Boobielicious backup' }); markBackup(); return; }
+      try { await navigator.share({ files: [file], title: 'Amme Tid backup' }); markBackup(); return; }
       catch (err) { if (err && err.name === 'AbortError') return; }
     }
     const a = document.createElement('a');
@@ -596,7 +597,7 @@
     if (!file) return;
     try {
       const data = JSON.parse(await file.text());
-      if (!data || data.app !== 'boobielicious' || !Array.isArray(data.feeds)) throw new Error('format');
+      if (!data || !['ammetid', 'boobielicious'].includes(data.app) || !Array.isArray(data.feeds)) throw new Error('format');
       const have = new Set(feeds().map(f => f.t));
       const incoming = data.feeds.filter(valid).map(f => ({ t: f.t, d: Number.isFinite(f.d) ? f.d : null, s: typeof f.s === 'string' ? f.s : '', ...(f.u ? { u: 1 } : {}) }));
       const added = incoming.filter(f => !have.has(f.t));
@@ -606,7 +607,7 @@
         : 'Alle amninger i filen fandtes i forvejen.';
       renderBackupInfo(); render();
     } catch {
-      backupStatus.textContent = 'Filen kunne ikke læses som en Boobielicious-backup.';
+      backupStatus.textContent = 'Filen kunne ikke læses som en Amme Tid-backup.';
     }
   });
 

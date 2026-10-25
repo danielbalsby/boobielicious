@@ -1,4 +1,4 @@
-const VERSION = 'boobielicious-v14';
+const VERSION = 'ammetid-v15';
 const SHELL = ['./', 'index.html', 'app.js', 'sound.js', 'manifest.json', 'icons/icon.svg', 'icons/apple-touch-icon.png', 'icons/icon-192.png', 'icons/icon-512.png'];
 
 self.addEventListener('install', e => {
@@ -34,8 +34,9 @@ self.addEventListener('fetch', e => {
   if (url.origin !== location.origin) return;
 
   // App-skal: netværk først (så opdateringer slår igennem), cache som offline-fallback
+  // no-cache: spørg altid serveren, om der er en nyere version (undgår gammel HTML med ny JS)
   e.respondWith(
-    fetch(req)
+    fetch(req, { cache: 'no-cache' })
       .then(res => { const copy = res.clone(); caches.open(VERSION).then(c => c.put(req, copy)); return res; })
       .catch(() => caches.match(req, { ignoreSearch: true }).then(r => r || caches.match('index.html')))
   );
