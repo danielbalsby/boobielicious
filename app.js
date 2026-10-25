@@ -1,4 +1,4 @@
-// Amme Tid – amme-tæller
+// Ammetid – amme-tæller
 (() => {
   'use strict';
   const { cue, unlockAudio, haptic, stopSound } = window.Boobie;
@@ -576,11 +576,11 @@
 
   $('exportBtn').addEventListener('click', async () => {
     const data = { app: 'ammetid', version: 2, exported: new Date().toISOString(), feeds: feeds(), settings: store.get(K.settings, {}) };
-    const name = `amme-tid-backup-${dayKey()}.json`;
+    const name = `ammetid-backup-${dayKey()}.json`;
     const blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
     const file = new File([blob], name, { type: 'application/json' });
     if (navigator.canShare && navigator.canShare({ files: [file] })) {
-      try { await navigator.share({ files: [file], title: 'Amme Tid backup' }); markBackup(); return; }
+      try { await navigator.share({ files: [file], title: 'Ammetid backup' }); markBackup(); return; }
       catch (err) { if (err && err.name === 'AbortError') return; }
     }
     const a = document.createElement('a');
@@ -607,7 +607,7 @@
         : 'Alle amninger i filen fandtes i forvejen.';
       renderBackupInfo(); render();
     } catch {
-      backupStatus.textContent = 'Filen kunne ikke læses som en Amme Tid-backup.';
+      backupStatus.textContent = 'Filen kunne ikke læses som en Ammetid-backup.';
     }
   });
 

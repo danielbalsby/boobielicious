@@ -1,4 +1,4 @@
-// Amme Tid – lyd og haptik.
+// Ammetid – lyd og haptik.
 // Lydene syntetiseres i Web Audio, renderes til små WAV-filer og afspilles i et <audio>-element.
 (() => {
   const $ = id => document.getElementById(id);
