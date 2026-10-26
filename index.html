@@ -11,6 +11,17 @@
 <meta name="apple-mobile-web-app-title" content="Ammetid">
 <meta name="theme-color" content="#F7F2EC">
 <meta name="color-scheme" content="light">
+<script>
+  // Sæt nattilstand før første billede, og markér at intro skal vises
+  (function () {
+    var d = document.documentElement;
+    try {
+      var s = JSON.parse(localStorage.getItem('boobielicious.settings') || '{}'), t = s.theme || 'auto', h = new Date().getHours();
+      if (t === 'night' || (t === 'auto' && (h >= 22 || h < 6))) { d.dataset.theme = 'night'; d.style.colorScheme = 'dark'; }
+    } catch (e) {}
+    d.classList.add('intro');
+  })();
+</script>
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
@@ -589,12 +600,60 @@
     .timer .clock { font-size: 28px; }
     .since { margin-top: 8px; }
   }
+  /* Opstart: brystet bygges op, ordet skrives frem, og brystet glider på plads */
+  .app > header, .app > footer { transition: opacity .8s ease, transform .8s cubic-bezier(.2,.7,.2,1); }
+  .intro .app > header, .intro .app > footer { opacity: 0; transform: translateY(8px); }
+  .intro .press { opacity: 0; }
+  .splash {
+    position: fixed; inset: 0; z-index: 50;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    background: var(--bg);
+    transition: background-color .7s ease;
+  }
+  .splash.out { background-color: transparent; pointer-events: none; }
+  .sp-mark { width: 136px; height: 136px; overflow: visible; will-change: transform; }
+  .sp-mark * { transform-box: view-box; transform-origin: 100px 100px; }
+  .sp-skin { fill: var(--skin); opacity: 0; }
+  .sp-areola { fill: var(--areola); transform: scale(0); }
+  .sp-nipple { fill: var(--nipple); transform: scale(0); }
+  .sp-drop { fill: var(--drop); opacity: 0; transform-origin: 100px 128px; }
+  .play .sp-skin { animation: spSkin 1s cubic-bezier(.2,.8,.2,1) both; }
+  .play .sp-areola { animation: spPop .8s cubic-bezier(.3,1.35,.45,1) .28s both; }
+  .play .sp-nipple { animation: spPop .7s cubic-bezier(.3,1.5,.45,1) .46s both; }
+  .play .sp-drop { animation: spDrop 1s cubic-bezier(.45,0,.2,1) .66s both; }
+  @keyframes spSkin { from { opacity: 0; transform: scale(.55); } to { opacity: 1; transform: none; } }
+  @keyframes spPop { from { transform: scale(0); } to { transform: none; } }
+  @keyframes spDrop {
+    0% { opacity: 0; transform: translateY(-16px) scale(.15); }
+    55% { opacity: 1; transform: translateY(3px) scale(1.06, .94); }
+    100% { opacity: 1; transform: none; }
+  }
+  .sp-word {
+    display: flex; margin-top: 34px;
+    font-family: var(--serif); font-style: italic; font-weight: 400; font-size: 40px; line-height: 1;
+    color: var(--ink); letter-spacing: .01em;
+    transition: opacity .45s ease, transform .6s ease;
+  }
+  .sp-word span { display: inline-block; opacity: 0; transform: translateY(10px); filter: blur(5px); }
+  .play .sp-word span { animation: spLetter .9s cubic-bezier(.2,.7,.2,1) both; animation-delay: calc(.5s + var(--i) * 60ms); }
+  @keyframes spLetter { to { opacity: 1; transform: none; filter: none; } }
+  .splash.out .sp-word { opacity: 0; transform: translateY(10px); }
+
   @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
   }
 </style>
 </head>
 <body>
+<div class="splash" id="splash" aria-hidden="true">
+  <svg class="sp-mark" id="spMark" viewBox="0 0 200 200">
+    <circle class="sp-skin" cx="100" cy="100" r="100"/>
+    <circle class="sp-areola" cx="100" cy="100" r="22"/>
+    <circle class="sp-nipple" cx="100" cy="100" r="10"/>
+    <path class="sp-drop" d="M100 128 C 103 136, 106 142, 106 147 A 6 6 0 0 1 94 147 C 94 142, 97 136, 100 128 Z"/>
+  </svg>
+  <div class="sp-word"><span style="--i:0">A</span><span style="--i:1">m</span><span style="--i:2">m</span><span style="--i:3">e</span><span style="--i:4">t</span><span style="--i:5">i</span><span style="--i:6">d</span></div>
+</div>
 <div class="app">
   <header>
     <div class="date" id="date"></div>
@@ -741,7 +800,7 @@
 <div class="celebrate" id="celebrate" aria-hidden="true"></div>
 <div class="message" id="message" role="status"><p><span class="big" id="celText">Otte i dag.</span><span class="small">Du giver så meget. Hvil dig, når du kan.</span></p></div>
 
-<script src="sound.js?v=16"></script>
-<script src="app.js?v=16"></script>
+<script src="sound.js?v=17"></script>
+<script src="app.js?v=17"></script>
 </body>
 </html>

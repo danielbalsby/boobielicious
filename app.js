@@ -659,6 +659,51 @@
   tick();
   render();
 
+  // ---------- Opstart ----------
+  // Brystet bygges op, "Ammetid" skrives frem, og brystet glider ned på sin plads i appen.
+  // Et tryk springer over. Vises kun ved kold start, ikke når appen hentes frem igen.
+  (function intro() {
+    const splash = $('splash'), mark = $('spMark'), root = document.documentElement;
+    if (!splash) return;
+    const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    let done = false, handoff = null;
+
+    function finish(fast) {
+      if (done) return;
+      done = true;
+      clearTimeout(handoff);
+      const a = mark.getBoundingClientRect(), b = els.press.getBoundingClientRect();
+      const dx = (b.left + b.width / 2) - (a.left + a.width / 2);
+      const dy = (b.top + b.height / 2) - (a.top + a.height / 2);
+      const k = b.width / a.width;
+      const ms = reduce ? 0 : fast ? 320 : 720;
+      splash.classList.add('out');
+      root.classList.remove('intro');
+      els.press.style.transition = 'none';
+      els.press.style.opacity = '0';
+      if (ms) {
+        mark.style.transition = `transform ${ms}ms cubic-bezier(.65,0,.25,1)`;
+        mark.style.transform = `translate(${dx}px, ${dy}px) scale(${k})`;
+      }
+      setTimeout(() => {
+        els.press.style.opacity = '';
+        splash.remove();
+        requestAnimationFrame(() => { els.press.style.transition = ''; });
+      }, ms + 30);
+    }
+
+    splash.addEventListener('pointerdown', () => finish(true));
+    if (reduce) { setTimeout(() => finish(), 350); return; }
+
+    // Vent kort på skrifttypen, så ordet ikke skifter form midt i animationen
+    const font = document.fonts && document.fonts.load ? document.fonts.load('italic 40px "Cormorant Garamond"') : Promise.resolve();
+    Promise.race([font, new Promise(r => setTimeout(r, 450))]).then(() => {
+      if (done) return;
+      splash.classList.add('play');
+      handoff = setTimeout(() => finish(), 1550);
+    });
+  })();
+
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
   }
