@@ -183,13 +183,19 @@
     35% { transform: scale(1.08); }
     100% { transform: scale(1); }
   }
-  .press .drop { transform-origin: 100px 132px; transform-box: view-box; }
-  .press.pulse .drop { animation: drip 1.3s cubic-bezier(.4,0,.2,1); }
+  /* Dråben ses kun under en amning og drypper langsomt */
+  .press .drop {
+    transform-origin: 100px 132px; transform-box: view-box;
+    opacity: 0; transform: translateY(-8px) scale(.3);
+    transition: opacity .6s ease, transform .7s cubic-bezier(.2,.7,.2,1);
+  }
+  .timing .press .drop { opacity: 1; transform: none; animation: drip 3.4s ease-in-out .8s infinite; }
   @keyframes drip {
-    0% { transform: translateY(0) scale(1); opacity: 1; }
-    45% { transform: translateY(26px) scale(.8); opacity: 0; }
-    46% { transform: translateY(-6px) scale(.2); opacity: 0; }
-    100% { transform: translateY(0) scale(1); opacity: 1; }
+    0%   { transform: none; opacity: 1; }
+    50%  { transform: translateY(1.5px) scale(1.07, 1.12); opacity: 1; }
+    74%  { transform: translateY(18px) scale(.75); opacity: 0; }
+    75%  { transform: translateY(-5px) scale(.25); opacity: 0; }
+    100% { transform: none; opacity: 1; }
   }
   .ring {
     position: absolute; inset: 0;
@@ -617,6 +623,8 @@
   .sp-areola { fill: var(--areola); transform: scale(0); }
   .sp-nipple { fill: var(--nipple); transform: scale(0); }
   .sp-drop { fill: var(--drop); opacity: 0; transform-origin: 100px 128px; }
+  .splash:not(.live) .sp-drop { display: none; }
+  .splash[hidden] { display: none; }
   .play .sp-skin { animation: spSkin 1s cubic-bezier(.2,.8,.2,1) both; }
   .play .sp-areola { animation: spPop .8s cubic-bezier(.3,1.35,.45,1) .28s both; }
   .play .sp-nipple { animation: spPop .7s cubic-bezier(.3,1.5,.45,1) .46s both; }
@@ -640,6 +648,7 @@
   .splash.out .sp-word { opacity: 0; transform: translateY(10px); }
 
   @media (prefers-reduced-motion: reduce) {
+    .timing .press .drop { animation: none !important; }
     *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
   }
 </style>
@@ -800,7 +809,7 @@
 <div class="celebrate" id="celebrate" aria-hidden="true"></div>
 <div class="message" id="message" role="status"><p><span class="big" id="celText">Otte i dag.</span><span class="small">Du giver så meget. Hvil dig, når du kan.</span></p></div>
 
-<script src="sound.js?v=17"></script>
-<script src="app.js?v=17"></script>
+<script src="sound.js?v=18"></script>
+<script src="app.js?v=18"></script>
 </body>
 </html>

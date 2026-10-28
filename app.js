@@ -661,12 +661,24 @@
 
   // ---------- Opstart ----------
   // Brystet bygges op, "Ammetid" skrives frem, og brystet glider ned på sin plads i appen.
-  // Et tryk springer over. Vises kun ved kold start, ikke når appen hentes frem igen.
-  (function intro() {
+  // Vises hver gang appen åbnes: ved kold start og når den hentes frem fra baggrunden.
+  // Et tryk springer over.
+  const intro = (() => {
     const splash = $('splash'), mark = $('spMark'), root = document.documentElement;
-    if (!splash) return;
     const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
-    let done = false, handoff = null;
+    let done = true, handoff = null, cleanup = null;
+
+    function reset() {
+      clearTimeout(handoff); clearTimeout(cleanup);
+      done = false;
+      splash.classList.remove('play', 'out');
+      splash.classList.toggle('live', !!active());     // dråben er kun med under en amning
+      mark.style.transition = 'none';
+      mark.style.transform = '';
+      els.press.style.opacity = '';
+      splash.hidden = false;
+      root.classList.add('intro');
+    }
 
     function finish(fast) {
       if (done) return;
@@ -685,24 +697,37 @@
         mark.style.transition = `transform ${ms}ms cubic-bezier(.65,0,.25,1)`;
         mark.style.transform = `translate(${dx}px, ${dy}px) scale(${k})`;
       }
-      setTimeout(() => {
+      cleanup = setTimeout(() => {
         els.press.style.opacity = '';
-        splash.remove();
+        splash.hidden = true;
         requestAnimationFrame(() => { els.press.style.transition = ''; });
       }, ms + 30);
     }
 
-    splash.addEventListener('pointerdown', () => finish(true));
-    if (reduce) { setTimeout(() => finish(), 350); return; }
+    function play() {
+      if (document.body.classList.contains('alarm')) { finish(true); return; }   // alarmen må ikke dækkes
+      if (reduce) { handoff = setTimeout(() => finish(), 350); return; }
+      // Vent kort på skrifttypen, så ordet ikke skifter form midt i animationen
+      const font = document.fonts && document.fonts.load ? document.fonts.load('italic 40px "Cormorant Garamond"') : Promise.resolve();
+      Promise.race([font, new Promise(r => setTimeout(r, 450))]).then(() => {
+        if (done) return;
+        void splash.offsetWidth;                       // genstart animationerne
+        splash.classList.add('play');
+        handoff = setTimeout(() => finish(), 1550);
+      });
+    }
 
-    // Vent kort på skrifttypen, så ordet ikke skifter form midt i animationen
-    const font = document.fonts && document.fonts.load ? document.fonts.load('italic 40px "Cormorant Garamond"') : Promise.resolve();
-    Promise.race([font, new Promise(r => setTimeout(r, 450))]).then(() => {
-      if (done) return;
-      splash.classList.add('play');
-      handoff = setTimeout(() => finish(), 1550);
-    });
+    splash.addEventListener('pointerdown', () => finish(true));
+    return { reset, play, get done() { return done; } };
   })();
+
+  intro.reset();
+  intro.play();
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) { intro.reset(); return; }   // klar før appen ses igen
+    if (intro.done) intro.reset();
+    intro.play();
+  });
 
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
