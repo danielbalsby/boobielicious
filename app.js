@@ -229,7 +229,7 @@
   [10, 15].forEach(m => {
     const ang = (m / FULL) * 2 * Math.PI;
     const c = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-    c.setAttribute('class', 'tick'); c.dataset.m = m;
+    c.setAttribute('class', 'tick'); c.dataset.m = m; c.style.setProperty('--at', m / FULL);
     c.setAttribute('cx', 110 + R * Math.cos(ang)); c.setAttribute('cy', 110 + R * Math.sin(ang)); c.setAttribute('r', 2.2);
     els.ticks.appendChild(c);
   });
@@ -250,7 +250,11 @@
     } catch {}
   }
 
-  function pulse() { els.press.classList.remove('pulse'); void els.press.offsetWidth; els.press.classList.add('pulse'); }
+  function pulse() {
+    // Den første bølge skal ende præcis på tidsringen, uanset brystets størrelse
+    els.press.style.setProperty('--to-track', (els.press.offsetWidth + 28) / els.press.offsetWidth);
+    els.press.classList.remove('pulse', 'starting'); void els.press.offsetWidth; els.press.classList.add('pulse');
+  }
 
   function startFeed() {
     const now = Date.now();
@@ -261,6 +265,7 @@
     chosenSide = null;
     keepAwake(true);
     pulse();
+    els.press.classList.add('starting');      // ringen tegnes, prikkerne og dråben kommer frem
     tick();
     render({ animate: true });
 
@@ -283,6 +288,7 @@
       saveFeeds(list);
     }
     store.set(K.active, null);
+    els.press.classList.remove('starting');
     stopAlarm();
     keepAwake(false);
     els.sub.textContent = SUB_DEFAULT;
