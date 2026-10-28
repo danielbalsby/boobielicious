@@ -661,14 +661,16 @@
 
   // ---------- Opstart ----------
   // Brystet bygges op, "Ammetid" skrives frem, og brystet glider ned på sin plads i appen.
-  // Vises hver gang appen åbnes: ved kold start og når den hentes frem fra baggrunden.
+  // Fuld udgave ved kold start, kort udgave (kun brystet) når appen hentes frem fra baggrunden.
   // Et tryk springer over.
   const intro = (() => {
     const splash = $('splash'), mark = $('spMark'), root = document.documentElement;
     const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
-    let done = true, handoff = null, cleanup = null;
+    let done = true, handoff = null, cleanup = null, quick = false;
 
-    function reset() {
+    function reset(short = false) {
+      quick = short;
+      splash.classList.toggle('quick', quick);
       clearTimeout(handoff); clearTimeout(cleanup);
       done = false;
       splash.classList.remove('play', 'out');
@@ -688,7 +690,7 @@
       const dx = (b.left + b.width / 2) - (a.left + a.width / 2);
       const dy = (b.top + b.height / 2) - (a.top + a.height / 2);
       const k = b.width / a.width;
-      const ms = reduce ? 0 : fast ? 320 : 720;
+      const ms = reduce ? 0 : fast ? 320 : quick ? 420 : 720;
       splash.classList.add('out');
       root.classList.remove('intro');
       els.press.style.transition = 'none';
@@ -706,7 +708,13 @@
 
     function play() {
       if (document.body.classList.contains('alarm')) { finish(true); return; }   // alarmen må ikke dækkes
-      if (reduce) { handoff = setTimeout(() => finish(), 350); return; }
+      if (reduce) { handoff = setTimeout(() => finish(), quick ? 150 : 350); return; }
+      if (quick) {
+        void splash.offsetWidth;
+        splash.classList.add('play');
+        handoff = setTimeout(() => finish(), 360);
+        return;
+      }
       // Vent kort på skrifttypen, så ordet ikke skifter form midt i animationen
       const font = document.fonts && document.fonts.load ? document.fonts.load('italic 40px "Cormorant Garamond"') : Promise.resolve();
       Promise.race([font, new Promise(r => setTimeout(r, 450))]).then(() => {
@@ -724,8 +732,8 @@
   intro.reset();
   intro.play();
   document.addEventListener('visibilitychange', () => {
-    if (document.hidden) { intro.reset(); return; }   // klar før appen ses igen
-    if (intro.done) intro.reset();
+    if (document.hidden) { intro.reset(true); return; }   // klar før appen ses igen
+    if (intro.done) intro.reset(true);
     intro.play();
   });
 
