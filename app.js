@@ -673,7 +673,8 @@
       splash.classList.toggle('quick', quick);
       clearTimeout(handoff); clearTimeout(cleanup);
       done = false;
-      splash.classList.remove('play', 'out');
+      splash.classList.remove('play', 'font', 'out');
+      els.press.classList.remove('arrive');
       splash.classList.toggle('live', !!active());     // dråben er kun med under en amning
       mark.style.transition = 'none';
       mark.style.transform = '';
@@ -690,20 +691,22 @@
       const dx = (b.left + b.width / 2) - (a.left + a.width / 2);
       const dy = (b.top + b.height / 2) - (a.top + a.height / 2);
       const k = b.width / a.width;
-      const ms = reduce ? 0 : fast ? 320 : quick ? 420 : 720;
+      const ms = reduce ? 0 : fast ? 360 : quick ? 520 : 860;
       splash.classList.add('out');
       root.classList.remove('intro');
       els.press.style.transition = 'none';
       els.press.style.opacity = '0';
       if (ms) {
-        mark.style.transition = `transform ${ms}ms cubic-bezier(.65,0,.25,1)`;
+        mark.style.transition = `transform ${ms}ms cubic-bezier(.55,0,.15,1)`;
         mark.style.transform = `translate(${dx}px, ${dy}px) scale(${k})`;
       }
       cleanup = setTimeout(() => {
         els.press.style.opacity = '';
+        els.press.classList.add('arrive');          // teksten under brystet toner frem
+        setTimeout(() => els.press.classList.remove('arrive'), 1000);
         splash.hidden = true;
         requestAnimationFrame(() => { els.press.style.transition = ''; });
-      }, ms + 30);
+      }, ms + 20);
     }
 
     function play() {
@@ -712,23 +715,21 @@
       if (quick) {
         void splash.offsetWidth;
         splash.classList.add('play');
-        handoff = setTimeout(() => finish(), 360);
+        handoff = setTimeout(() => finish(), 380);
         return;
       }
-      // Vent kort på skrifttypen, så ordet ikke skifter form midt i animationen
+      // Brystet starter med det samme; ordet venter kort på skrifttypen, så det ikke skifter form undervejs
+      void splash.offsetWidth;                         // genstart animationerne
+      splash.classList.add('play');
+      handoff = setTimeout(() => finish(), 1700);
       const font = document.fonts && document.fonts.load ? document.fonts.load('italic 40px "Cormorant Garamond"') : Promise.resolve();
-      Promise.race([font, new Promise(r => setTimeout(r, 450))]).then(() => {
-        if (done) return;
-        void splash.offsetWidth;                       // genstart animationerne
-        splash.classList.add('play');
-        handoff = setTimeout(() => finish(), 1550);
-      });
+      Promise.race([font, new Promise(r => setTimeout(r, 300))]).then(() => { if (!done) splash.classList.add('font'); });
     }
 
     function skip() {
       clearTimeout(handoff); clearTimeout(cleanup);
       done = true;
-      splash.classList.remove('play', 'out');
+      splash.classList.remove('play', 'font', 'out');
       splash.hidden = true;
       root.classList.remove('intro');
       mark.style.transition = 'none';
