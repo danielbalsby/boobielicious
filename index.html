@@ -12,14 +12,15 @@
 <meta name="theme-color" content="#F7F2EC">
 <meta name="color-scheme" content="light">
 <script>
-  // Sæt nattilstand før første billede, og markér at intro skal vises
+  // Sæt nattilstand før første billede, og markér at intro skal vises (ikke under en amning)
   (function () {
-    var d = document.documentElement;
+    var d = document.documentElement, live = false;
     try {
       var s = JSON.parse(localStorage.getItem('boobielicious.settings') || '{}'), t = s.theme || 'auto', h = new Date().getHours();
       if (t === 'night' || (t === 'auto' && (h >= 22 || h < 6))) { d.dataset.theme = 'night'; d.style.colorScheme = 'dark'; }
+      live = !!JSON.parse(localStorage.getItem('boobielicious.active') || 'null');
     } catch (e) {}
-    d.classList.add('intro');
+    if (!live) d.classList.add('intro');
   })();
 </script>
 <link rel="manifest" href="manifest.json">
@@ -815,7 +816,7 @@
 <div class="celebrate" id="celebrate" aria-hidden="true"></div>
 <div class="message" id="message" role="status"><p><span class="big" id="celText">Otte i dag.</span><span class="small">Du giver så meget. Hvil dig, når du kan.</span></p></div>
 
-<script src="sound.js?v=19"></script>
-<script src="app.js?v=19"></script>
+<script src="sound.js?v=20"></script>
+<script src="app.js?v=20"></script>
 </body>
 </html>

@@ -662,7 +662,7 @@
   // ---------- Opstart ----------
   // Brystet bygges op, "Ammetid" skrives frem, og brystet glider ned på sin plads i appen.
   // Fuld udgave ved kold start, kort udgave (kun brystet) når appen hentes frem fra baggrunden.
-  // Et tryk springer over.
+  // Et tryk springer over. Under en amning vises ingen intro – så er timeren det vigtige.
   const intro = (() => {
     const splash = $('splash'), mark = $('spMark'), root = document.documentElement;
     const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -725,14 +725,30 @@
       });
     }
 
+    function skip() {
+      clearTimeout(handoff); clearTimeout(cleanup);
+      done = true;
+      splash.classList.remove('play', 'out');
+      splash.hidden = true;
+      root.classList.remove('intro');
+      mark.style.transition = 'none';
+      mark.style.transform = '';
+      els.press.style.opacity = '';
+      els.press.style.transition = '';
+    }
+
     splash.addEventListener('pointerdown', () => finish(true));
-    return { reset, play, get done() { return done; } };
+    return { reset, play, skip, get done() { return done; } };
   })();
 
-  intro.reset();
-  intro.play();
+  if (active()) intro.skip();
+  else { intro.reset(); intro.play(); }
   document.addEventListener('visibilitychange', () => {
-    if (document.hidden) { intro.reset(true); return; }   // klar før appen ses igen
+    if (document.hidden) {                                 // klar før appen ses igen
+      if (active()) intro.skip(); else intro.reset(true);
+      return;
+    }
+    if (active()) { intro.skip(); return; }
     if (intro.done) intro.reset(true);
     intro.play();
   });
