@@ -10,6 +10,7 @@
     settings: 'boobielicious.settings',
     cel: 'boobielicious.celebrated',
     backup: 'boobielicious.lastBackup',
+    push: 'boobielicious.push',          // push-abonnement (kun når notifikationer er slået til)
     oldFeeds: 'boobielicious.feeds',     // v1-data
     oldDur: 'boobielicious.durations'
   };
@@ -17,7 +18,10 @@
   const FULL = 25;                       // ringen er fuld ved 25 min
   const AUTO_STOP = 90 * 60e3;           // glemt timer stoppes efter 90 min
   const HOLD_MS = 650;                   // hold for at stoppe
-  const DEFAULTS = { goal: 8, theme: 'auto', shortcut: false, shortcutName: 'Amningstimer' };
+  const DEFAULTS = { goal: 8, theme: 'auto', shortcut: false, shortcutName: 'Amningstimer', push: false };
+  // Notifikationsserveren (push/worker.js) og dens offentlige nøgle
+  const PUSH_URL = 'https://ammetid-push.PLACEHOLDER.workers.dev';
+  const PUSH_KEY = 'BLLXRK8O3ob25RvFKh-2cjdA7ox07j4LLsHcscajn8sDCdrN-BiD2itSNFayC3p_0NTGhk4xBk4I8Ug8Au0sRo4';
   const WORDS = { 1: 'En', 2: 'To', 3: 'Tre', 4: 'Fire', 5: 'Fem', 6: 'Seks', 7: 'Syv', 8: 'Otte', 9: 'Ni', 10: 'Ti', 11: 'Elleve', 12: 'Tolv', 13: 'Tretten', 14: 'Fjorten', 15: 'Femten', 16: 'Seksten' };
   const SIDE = { L: 'venstre', R: 'højre' };
 
@@ -297,6 +301,11 @@
     }
     const st = settings();
     if (st.shortcut) setTimeout(() => runShortcut(st.shortcutName), 450);
+    if (st.push) {
+      const r = run(), f = findFeed(now);
+      const label = !f.s ? '' : f.s.length === 1 && r ? `${SIDE[f.s][0].toUpperCase()}${SIDE[f.s].slice(1)} ${r.pos}/2` : '';
+      pushCall('/schedule', { start: now, label });
+    }
   }
 
   function stopFeed({ unfinished = false } = {}) {
@@ -309,6 +318,7 @@
       saveFeeds(list);
     }
     store.set(K.active, null);
+    pushCancel();
     els.press.classList.remove('starting');
     stopAlarm();
     keepAwake(false);
@@ -375,7 +385,7 @@
     const today = inDay(midnight());
     if (!today.length) return;
     const last = today[today.length - 1];
-    if (isLive(last)) { store.set(K.active, null); stopAlarm(); keepAwake(false); }
+    if (isLive(last)) { store.set(K.active, null); pushCancel(); stopAlarm(); keepAwake(false); }
     saveFeeds(feeds().filter(f => f.t !== last.t));
     chosenSide = null;
     tick(); render();
@@ -396,9 +406,55 @@
     els.wake.setAttribute('aria-hidden', 'true');
     stopSound();
   }
-  $('awakeBtn').addEventListener('click', () => { haptic([30]); stopAlarm(); });
+  $('awakeBtn').addEventListener('click', () => { haptic([30]); stopAlarm(); pushCancel(); });
   $('endBtn').addEventListener('click', () => { haptic([30]); stopFeed(); });
   document.addEventListener('pointerdown', () => unlockAudio());   // også når appen genåbnes midt i en amning
+
+  // ---------- Notifikationer på låst skærm ----------
+  // Serveren får kun push-adressen, starttidspunktet og fx "Venstre 1/2" – og glemmer det, når amningen slutter.
+  const pushSupported = () => 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
+  const standalone = () => matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+  function urlKey(b64) {
+    const s = atob(b64.replace(/-/g, '+').replace(/_/g, '/') + '='.repeat((4 - b64.length % 4) % 4));
+    return Uint8Array.from(s, c => c.charCodeAt(0));
+  }
+  async function pushSub(create = false) {
+    const reg = await navigator.serviceWorker.ready;
+    let sub = await reg.pushManager.getSubscription();
+    if (!sub && create) sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlKey(PUSH_KEY) });
+    if (sub) store.set(K.push, sub.toJSON());
+    return sub;
+  }
+  async function pushCall(path, data = {}) {
+    try {
+      const sub = (await pushSub()) || null;
+      const json = sub ? sub.toJSON() : store.get(K.push, null);
+      if (!json) return false;
+      const res = await fetch(PUSH_URL + path, {
+        method: 'POST', keepalive: true,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sub: json, ...data }),
+      });
+      return res.ok;
+    } catch { return false; }
+  }
+  const pushCancel = () => { if (settings().push) pushCall('/cancel'); };
+
+  async function enablePush() {
+    if (!pushSupported() || !standalone()) throw new Error('Åbn Ammetid fra hjemmeskærmen for at slå notifikationer til (kræver iOS 16.4 eller nyere).');
+    const perm = await Notification.requestPermission();
+    if (perm !== 'granted') throw new Error('Notifikationer er ikke tilladt. Slå dem til under Indstillinger › Notifikationer › Ammetid.');
+    await pushSub(true);
+    setSetting('push', true);
+    const a = active();
+    if (a) pushCall('/schedule', { start: a.start, label: '' });
+  }
+  async function disablePush() {
+    await pushCall('/cancel');
+    setSetting('push', false);
+    try { const sub = await pushSub(); if (sub) await sub.unsubscribe(); } catch {}
+    store.set(K.push, null);
+  }
 
   // ---------- iPhone-timer via Genveje ----------
   function runShortcut(name) {
@@ -561,12 +617,14 @@
   });
 
   // ---------- Indstillinger ----------
-  const goalVal = $('goalVal'), themeSeg = $('themeSeg'), scToggle = $('scToggle');
+  const goalVal = $('goalVal'), themeSeg = $('themeSeg'), scToggle = $('scToggle'), pushToggle = $('pushToggle'), pushStatus = $('pushStatus');
   function renderSettings() {
     const st = settings();
     goalVal.textContent = st.goal;
     [...themeSeg.children].forEach(b => b.classList.toggle('on', b.dataset.v === st.theme));
     scToggle.checked = !!st.shortcut;
+    pushToggle.checked = !!st.push;
+    $('pushTestRow').hidden = !st.push;
     renderBackupInfo();
   }
   $('setBtn').addEventListener('click', () => { renderSettings(); openSheet(els.settings); });
@@ -583,6 +641,21 @@
     renderSettings(); applyTheme();
   });
   scToggle.addEventListener('change', () => setSetting('shortcut', scToggle.checked));
+  pushToggle.addEventListener('change', async () => {
+    pushStatus.textContent = '';
+    try {
+      if (pushToggle.checked) { await enablePush(); pushStatus.textContent = 'Slået til. Tryk “Send en prøve” for at se, hvordan det ser ud.'; }
+      else { await disablePush(); pushStatus.textContent = 'Slået fra.'; }
+    } catch (err) {
+      pushToggle.checked = false; setSetting('push', false);
+      pushStatus.textContent = err.message || 'Det lykkedes ikke. Prøv igen.';
+    }
+    renderSettings();
+  });
+  $('pushTest').addEventListener('click', async () => {
+    pushStatus.textContent = 'Sender …';
+    pushStatus.textContent = await pushCall('/test') ? 'Sendt. Den bør dukke op om et øjeblik.' : 'Kunne ikke sende. Tjek internetforbindelsen.';
+  });
   $('scTest').addEventListener('click', () => runShortcut(settings().shortcutName));
 
   // ---------- Backup ----------

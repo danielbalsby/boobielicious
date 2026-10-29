@@ -1,4 +1,7 @@
-.claude/
 .DS_Store
+.claude/
+.wrangler/
 lydprøver/
+node_modules/
+push/.vapid.json
 skærmbilleder/

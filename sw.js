@@ -1,4 +1,4 @@
-const VERSION = 'ammetid-v23';
+const VERSION = 'ammetid-v24';
 const SHELL = ['./', 'index.html', 'app.js', 'sound.js', 'manifest.json', 'icons/icon.svg', 'icons/apple-touch-icon.png', 'icons/icon-192.png', 'icons/icon-512.png'];
 
 self.addEventListener('install', e => {
@@ -40,4 +40,38 @@ self.addEventListener('fetch', e => {
       .then(res => { const copy = res.clone(); caches.open(VERSION).then(c => c.put(req, copy)); return res; })
       .catch(() => caches.match(req, { ignoreSearch: true }).then(r => r || caches.match('index.html')))
   );
+});
+
+// ---------- Notifikationer (fra push/worker.js) ----------
+self.addEventListener('push', e => {
+  let msg = {};
+  try { msg = e.data ? e.data.json() : {}; } catch {}
+  const title = msg.title || 'Ammetid';
+  e.waitUntil((async () => {
+    // Er appen åben på skærmen, spiller den selv lyden – så vis beskeden lydløst og fjern den igen
+    const wins = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+    const seen = wins.some(w => w.visibilityState === 'visible');
+    await self.registration.showNotification(title, {
+      body: msg.body || '',
+      tag: msg.tag || 'ammetid',
+      renotify: true,
+      silent: seen,
+      requireInteraction: !!msg.alarm && !seen,
+      icon: 'icons/icon-192.png',
+      badge: 'icons/icon-192.png',
+    });
+    if (seen) {
+      await new Promise(r => setTimeout(r, 1500));
+      (await self.registration.getNotifications({ tag: msg.tag || 'ammetid' })).forEach(n => n.close());
+    }
+  })());
+});
+
+self.addEventListener('notificationclick', e => {
+  e.notification.close();
+  e.waitUntil((async () => {
+    const wins = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+    if (wins.length) return wins[0].focus();
+    return self.clients.openWindow('./');
+  })());
 });

@@ -1,0 +1,14 @@
+name = "ammetid-push"
+main = "worker.js"
+compatibility_date = "2026-09-01"
+
+[[durable_objects.bindings]]
+name = "FEEDS"
+class_name = "Feed"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["Feed"]
+
+# Den private VAPID-nøgle ligger som hemmelighed, ikke i koden:
+#   wrangler secret put VAPID_JWK

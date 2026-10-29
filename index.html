@@ -778,6 +778,16 @@
     <h3 class="set-h">Alarm på låst skærm</h3>
     <div class="set">
       <div class="set-row">
+        <div><b>Notifikationer</b><small>Besked ved 10 og 15 minutter og en alarm ved 25, også når telefonen er låst eller appen er lukket. Følger telefonens lydløs-knap og Fokus.</small></div>
+        <input type="checkbox" switch id="pushToggle" aria-label="Notifikationer">
+      </div>
+      <div class="btns" id="pushTestRow" hidden><button class="ghost" id="pushTest">Send en prøve</button></div>
+      <p class="status" id="pushStatus" role="status"></p>
+    </div>
+
+    <h3 class="set-h">Eller: iPhone-timer via Genveje</h3>
+    <div class="set">
+      <div class="set-row">
         <div><b>Start iPhone-timer</b><small>Starter en 25-minutters timer i Ur-appen, når en amning begynder. Den ringer også på låst skærm og i lydløs tilstand.</small></div>
         <input type="checkbox" switch id="scToggle" aria-label="Start iPhone-timer">
       </div>
@@ -806,7 +816,7 @@
       <p class="status" id="backupStatus" role="status"></p>
     </div>
 
-    <p class="fine">Ammetid gemmer alt på denne telefon og sender intet nogen steder hen.</p>
+    <p class="fine">Ammetid gemmer alt på denne telefon. Med notifikationer slået til sendes kun starttidspunktet for den igangværende amning (og fx “Venstre 1/2”) til Ammetids notifikationsserver, og det slettes, når amningen slutter.</p>
   </div>
 </section>
 
@@ -837,7 +847,7 @@
 <div class="celebrate" id="celebrate" aria-hidden="true"></div>
 <div class="message" id="message" role="status"><p><span class="big" id="celText">Otte i dag.</span><span class="small">Du giver så meget. Hvil dig, når du kan.</span></p></div>
 
-<script src="sound.js?v=23"></script>
-<script src="app.js?v=23"></script>
+<script src="sound.js?v=24"></script>
+<script src="app.js?v=24"></script>
 </body>
 </html>
