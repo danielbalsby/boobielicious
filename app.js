@@ -20,7 +20,7 @@
   const HOLD_MS = 650;                   // hold for at stoppe
   const DEFAULTS = { goal: 8, theme: 'auto', shortcut: false, shortcutName: 'Amningstimer', push: false };
   // Notifikationsserveren (push/worker.js) og dens offentlige nøgle
-  const PUSH_URL = 'https://ammetid-push.PLACEHOLDER.workers.dev';
+  const PUSH_URL = 'https://ammetid-push.danielbalsby.workers.dev';
   const PUSH_KEY = 'BLLXRK8O3ob25RvFKh-2cjdA7ox07j4LLsHcscajn8sDCdrN-BiD2itSNFayC3p_0NTGhk4xBk4I8Ug8Au0sRo4';
   const WORDS = { 1: 'En', 2: 'To', 3: 'Tre', 4: 'Fire', 5: 'Fem', 6: 'Seks', 7: 'Syv', 8: 'Otte', 9: 'Ni', 10: 'Ti', 11: 'Elleve', 12: 'Tolv', 13: 'Tretten', 14: 'Fjorten', 15: 'Femten', 16: 'Seksten' };
   const SIDE = { L: 'venstre', R: 'højre' };
