@@ -153,6 +153,8 @@
   .sides button i { display: inline-block; width: 6px; height: 6px; border-radius: 50%; margin-right: 7px; vertical-align: 1px; }
   .sides [data-side="L"] i { background: var(--areola); }
   .sides [data-side="R"] i { background: var(--side-r); }
+  .sides .nth { font-size: 11px; color: var(--muted); margin-left: 6px; font-variant-numeric: lining-nums tabular-nums; letter-spacing: .02em; }
+  .sides .nth:empty { display: none; }
   main {
     flex: 1;
     padding-bottom: 56px;
@@ -695,7 +697,7 @@
     <div class="count" aria-live="polite"><span class="n" id="n">0</span><span class="of">af 8</span></div>
     <div class="dots" id="dots" aria-hidden="true"></div>
     <div class="sides" id="sides" role="group" aria-label="Side">
-      <button data-side="L"><i></i>Venstre</button><button data-side="R"><i></i>Højre</button>
+      <button data-side="L"><i></i>Venstre<small class="nth"></small></button><button data-side="R"><i></i>Højre<small class="nth"></small></button>
     </div>
   </header>
 
@@ -835,7 +837,7 @@
 <div class="celebrate" id="celebrate" aria-hidden="true"></div>
 <div class="message" id="message" role="status"><p><span class="big" id="celText">Otte i dag.</span><span class="small">Du giver så meget. Hvil dig, når du kan.</span></p></div>
 
-<script src="sound.js?v=22"></script>
-<script src="app.js?v=22"></script>
+<script src="sound.js?v=23"></script>
+<script src="app.js?v=23"></script>
 </body>
 </html>

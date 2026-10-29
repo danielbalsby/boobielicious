@@ -92,11 +92,26 @@
   const durMs = f => f.d ? f.d * 1000 : (isLive(f) ? Date.now() - f.t : 0);
   const dayTotal = start => inDay(start).reduce((sum, f) => sum + durMs(f), 0);
 
-  // Næste side: modsat af den side, der sidst blev ammet fra
+  // Siderne: samme bryst to gange, så skift. En amning tæller for den side, den sluttede på.
+  // run() fortæller hvilken side de seneste amninger var på, og om den sidste var nr. 1/2 eller 2/2.
+  function run(list = feeds()) {
+    const withSide = list.filter(f => f.s);
+    if (!withSide.length) return null;
+    const side = withSide[withSide.length - 1].s.slice(-1);
+    let n = 0;
+    for (let i = withSide.length - 1; i >= 0; i--) {
+      const s = withSide[i].s;
+      if (s.slice(-1) !== side) break;
+      n++;
+      if (s.length > 1) break;                  // skiftede side undervejs: tællingen starter her
+    }
+    return { side, pos: (n - 1) % 2 + 1 };
+  }
+  const nextPos = side => { const r = run(); return r && r.side === side ? r.pos % 2 + 1 : 1; };
   function suggestedSide() {
-    const last = [...feeds()].reverse().find(f => f.s);
-    if (!last) return 'L';
-    return last.s.slice(-1) === 'L' ? 'R' : 'L';
+    const r = run();
+    if (!r) return 'L';
+    return r.pos === 1 ? r.side : (r.side === 'L' ? 'R' : 'L');
   }
   let chosenSide = null;
   const currentSide = () => chosenSide || suggestedSide();
@@ -141,7 +156,13 @@
   function renderSides() {
     const a = active(), f = a && findFeed(a.start);
     const on = f ? (f.s || '') : currentSide();
-    [...els.sides.children].forEach(b => b.classList.toggle('on', on.includes(b.dataset.side)));
+    const r = f ? run() : null;               // under en amning: hvilken gang i rækken denne er
+    [...els.sides.children].forEach(b => {
+      const x = b.dataset.side, isOn = on.includes(x);
+      b.classList.toggle('on', isOn);
+      const pos = !isOn ? '' : f ? (r && r.side === x && on.slice(-1) === x ? r.pos : '') : nextPos(x);
+      b.querySelector('.nth').textContent = pos ? `${pos}/2` : '';
+    });
   }
 
   function drawStrip(el, start) {
@@ -202,7 +223,7 @@
     }
     if (isLive(last)) { els.since.textContent = ''; return; }
     const ago = Date.now() - last.t - durMs(last);
-    const side = last.s ? ` · ${sideText(last.s)}` : '';
+    const r = run(), side = !last.s ? '' : last.s.length === 1 && r ? ` · ${SIDE[last.s]} ${r.pos}/2` : ` · ${sideText(last.s)}`;
     els.since.innerHTML = ago < 60000 ? `Sidst ammet <b>lige nu</b>${side}` : `Sidst ammet for <b>${fmtSpan(ago)}</b> siden${side}`;
   }
   els.since.addEventListener('click', e => {
