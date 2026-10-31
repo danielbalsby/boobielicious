@@ -6,7 +6,7 @@
   // Nøglerne bærer appens gamle navn, så eksisterende data stadig findes
   const K = {
     feeds: 'boobielicious.v2.feeds',     // [{ t, d, s, u }] – t: start (ms), d: varighed (s) eller null, s: side ('L','R','LR','RL',''), u: 1 hvis ikke stoppet
-    active: 'boobielicious.active',      // { start, fired: [minutter] }
+    active: 'boobielicious.active',      // { start, fired: [minutter], paused?: tidspunkt, pausedMs?: samlet pause }
     settings: 'boobielicious.settings',
     cel: 'boobielicious.celebrated',
     backup: 'boobielicious.lastBackup',
@@ -18,6 +18,7 @@
   const FULL = 25;                       // ringen er fuld ved 25 min
   const AUTO_STOP = 90 * 60e3;           // glemt timer stoppes efter 90 min
   const HOLD_MS = 650;                   // hold for at stoppe
+  const PAUSE_MAX = 60 * 60e3;           // glemt pause: amningen afsluttes efter en time
   const DEFAULTS = { goal: 8, theme: 'auto', shortcut: false, shortcutName: 'Amningstimer', push: false };
   // Notifikationsserveren (push/worker.js) og dens offentlige nøgle
   const PUSH_URL = 'https://ammetid-push.danielbalsby.workers.dev';
@@ -93,7 +94,9 @@
 
   const active = () => store.get(K.active, null);
   const isLive = f => { const a = active(); return !!a && a.start === f.t; };
-  const durMs = f => f.d ? f.d * 1000 : (isLive(f) ? Date.now() - f.t : 0);
+  // Ammetid uden pauser
+  const elapsed = (a, now = Date.now()) => now - a.start - (a.pausedMs || 0) - (a.paused ? now - a.paused : 0);
+  const durMs = f => f.d ? f.d * 1000 : (isLive(f) ? elapsed(active()) : 0);
   const dayTotal = start => inDay(start).reduce((sum, f) => sum + durMs(f), 0);
 
   // Siderne: samme bryst to gange, så skift. En amning tæller for den side, den sluttede på.
@@ -260,11 +263,12 @@
   });
 
   let subTimer = null;
-  const SUB_DEFAULT = 'Hold fingeren nede for at stoppe';
+  const subDefault = () => active()?.paused ? 'På pause · tryk for at fortsætte' : 'Tryk for pause · hold for at stoppe';
+  const resetSub = () => { clearTimeout(subTimer); els.sub.textContent = subDefault(); };
   function flashSub(text) {
     els.sub.textContent = text;
     clearTimeout(subTimer);
-    subTimer = setTimeout(() => { els.sub.textContent = SUB_DEFAULT; }, 2600);
+    subTimer = setTimeout(resetSub, 2600);
   }
 
   let wakeLock = null;
@@ -289,6 +293,7 @@
     store.set(K.active, { start: now, fired: [] });
     chosenSide = null;
     keepAwake(true);
+    resetSub();
     pulse();
     els.press.classList.add('starting');      // ringen tegnes, prikkerne og dråben kommer frem
     tick();
@@ -301,11 +306,39 @@
     }
     const st = settings();
     if (st.shortcut) setTimeout(() => runShortcut(st.shortcutName), 450);
-    if (st.push) {
-      const r = run(), f = findFeed(now);
-      const label = !f.s ? '' : f.s.length === 1 && r ? `${SIDE[f.s][0].toUpperCase()}${SIDE[f.s].slice(1)} ${r.pos}/2` : '';
-      pushCall('/schedule', { start: now, label });
-    }
+    if (st.push) pushCall('/schedule', { start: now, label: pushLabel() });
+  }
+
+  // Tekst til notifikationen, fx "Venstre 1/2"
+  function pushLabel() {
+    const a = active(), f = a && findFeed(a.start), r = run();
+    if (!f || f.s.length !== 1 || !r) return '';
+    return `${SIDE[f.s][0].toUpperCase()}${SIDE[f.s].slice(1)} ${r.pos}/2`;
+  }
+
+  // Pause: uret står stille, notifikationerne holder pause, og pausen tæller ikke med i varigheden
+  function pauseFeed() {
+    const a = active();
+    if (!a || a.paused) return;
+    a.paused = Date.now();
+    store.set(K.active, a);
+    pushCancel();
+    keepAwake(false);
+    haptic([20]);
+    resetSub(); tick(); render();
+  }
+  function resumeFeed() {
+    const a = active();
+    if (!a || !a.paused) return;
+    const now = Date.now();
+    a.pausedMs = (a.pausedMs || 0) + (now - a.paused);
+    delete a.paused;
+    store.set(K.active, a);
+    if (settings().push) pushCall('/schedule', { start: now - elapsed(a, now), label: pushLabel() });   // samme milepæle, rykket med pausen
+    keepAwake(true);
+    haptic([20]);
+    pulse();
+    resetSub(); tick(); render();
   }
 
   function stopFeed({ unfinished = false } = {}) {
@@ -314,7 +347,7 @@
     const list = feeds().slice(), f = list.find(x => x.t === a.start);
     if (f) {
       if (unfinished) { f.d = null; f.u = 1; }
-      else { f.d = Math.max(1, Math.round((Date.now() - a.start) / 1000)); delete f.u; }
+      else { f.d = Math.max(1, Math.round(elapsed(a) / 1000)); delete f.u; }
       saveFeeds(list);
     }
     store.set(K.active, null);
@@ -322,7 +355,7 @@
     els.press.classList.remove('starting');
     stopAlarm();
     keepAwake(false);
-    els.sub.textContent = SUB_DEFAULT;
+    resetSub();
     tick();
     render();
   }
@@ -331,13 +364,15 @@
     applyTheme();
     const a = active();
     document.body.classList.toggle('timing', !!a);
+    document.body.classList.toggle('paused', !!a?.paused);
     if (!a) {
       els.arc.style.strokeDasharray = '0 1';
       drawDayline();
       renderSince();
       return;
     }
-    const ms = Date.now() - a.start, min = ms / 60000;
+    const ms = elapsed(a), min = ms / 60000;
+    if (a.paused && Date.now() - a.paused > PAUSE_MAX) { stopFeed(); return; }   // varigheden er tiden før pausen
     if (ms > AUTO_STOP) { stopFeed({ unfinished: true }); return; }
     drawDayline();
     renderTotal();
@@ -372,7 +407,8 @@
   ['pointerup', 'pointercancel', 'pointerleave'].forEach(ev => els.press.addEventListener(ev, cancelHold));
   els.press.addEventListener('click', () => {
     if (held) { held = false; return; }
-    if (active()) { haptic([15]); flashSub('Hold fingeren nede for at stoppe'); return; }
+    const a = active();
+    if (a) { if (a.paused) resumeFeed(); else pauseFeed(); return; }
     const now = Date.now();
     if (now - lastTap < 800) return;           // undgå utilsigtede dobbelttryk
     lastTap = now;
@@ -740,7 +776,7 @@
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) return;
     cache = null;
-    if (active()) keepAwake(true);
+    if (active() && !active().paused) keepAwake(true);
     tick(); render();
   });
 
@@ -749,10 +785,11 @@
     const a = active();
     if (!a) return;
     if (!findFeed(a.start)) { store.set(K.active, null); return; }
-    const min = (Date.now() - a.start) / 60000;
+    const min = elapsed(a) / 60000;
     a.fired = MILESTONES.filter(m => min >= m);
     store.set(K.active, a);
-    keepAwake(true);
+    resetSub();
+    if (!a.paused) keepAwake(true);
   })();
 
   applyTheme();
