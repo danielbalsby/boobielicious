@@ -448,10 +448,11 @@
   // Fortryd vises kort efter et start eller stop. Ellers rettes og slettes amninger i Historik.
   // Efter et start slettes amningen igen; efter et stop fortsætter den, som om den aldrig var stoppet.
   let toastTimer = null, toastFeed = null, toastResume = null;
-  function toast(text, t, ms, resume = null) {
+  function toast(text, t, ms, resume = null, earlier = false) {
     toastFeed = t;
     toastResume = resume;
     $('toastText').textContent = text;
+    $('toastEarlier').hidden = !earlier || earliestStart(t) >= t;
     $('toast').classList.add('show');
     $('toast').parentElement.classList.add('toasting');
     $('toast').setAttribute('aria-hidden', 'false');
@@ -465,6 +466,29 @@
     $('toast').setAttribute('aria-hidden', 'true');
     toastFeed = null; toastResume = null;
   }
+  // Glemte at trykke: rykker starten 5 min tilbage pr. tryk, dog ikke ind i forrige amning og højst en time
+  const EARLIER_STEP = 5 * 60e3, EARLIER_MAX = 60 * 60e3;
+  function earliestStart(t) {
+    const prev = feeds().filter(f => f.t < t).pop();
+    const prevEnd = prev ? prev.t + (prev.d || 0) * 1000 + 60e3 : -Infinity;
+    return Math.max(Date.now() - EARLIER_MAX, prevEnd);
+  }
+  $('toastEarlier').addEventListener('click', () => {
+    const a = active();
+    if (!a || a.start !== toastFeed) return;
+    let t = Math.max(a.start - EARLIER_STEP, earliestStart(a.start));
+    if (t >= a.start) return;
+    const list = feeds().slice(), f = list.find(x => x.t === a.start);
+    while (list.some(x => x.t === t)) t -= 1;
+    f.t = t; a.start = t;
+    a.fired = MILESTONES.filter(m => elapsed(a) / 60000 >= m);   // ingen klokke for minutter, der allerede er gået
+    saveFeeds(list);
+    store.set(K.active, a);
+    if (settings().push && !a.paused) pushCall('/schedule', { start: Date.now() - elapsed(a), label: pushLabel() });
+    haptic([15]);
+    toast(`Startet kl. ${fmtTime(t)}`, t, 6000, null, true);
+    tick(); render();
+  });
   function stopWithUndo() {
     const a = active(), f = stopFeed();
     if (f && f.d) toast(`Gemt · ${Math.max(1, Math.round(f.d / 60))} min`, f.t, 8000, a);
@@ -547,7 +571,7 @@
     unlockAudio();
     haptic([30]);
     startFeed();
-    toast('Amning startet', active().start, 6000);
+    toast('Amning startet', active().start, 6000, null, true);
   });
 
   // ---------- Sikkerhedsalarm ----------
@@ -802,6 +826,8 @@
     $('goalHelp').textContent = st.goal ? 'Antal amninger pr. døgn' : 'Intet mål. Forsiden viser kun antallet';
     [...themeSeg.children].forEach(b => b.classList.toggle('on', b.dataset.v === st.theme));
     scToggle.checked = !!st.shortcut;
+    // Genveje-timeren er en nødløsning fra før notifikationerne: kun for dem, der bruger den, eller hvis push ikke findes
+    if (st.shortcut || !pushSupported()) $('scSection').hidden = false;
     pushToggle.checked = !!st.push;
     $('pushTestRow').hidden = !st.push;
     renderBackupInfo();
