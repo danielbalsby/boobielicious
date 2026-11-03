@@ -31,7 +31,7 @@
     date: $('date'), n: $('n'), dots: $('dots'), sides: $('sides'), press: $('press'),
     clock: $('clock'), sub: $('sub'), arc: $('arc'), ticks: $('ticks'),
     strip: $('strip'), marks: $('marks'), total: $('total'), since: $('since'), nudge: $('nudge'),
-    sheet: $('sheet'), seg: $('seg'), stats: $('stats'), days: $('days'), bars: $('bars'), chartAvg: $('chartAvg'), chartFrom: $('chartFrom'),
+    sheet: $('sheet'), seg: $('seg'), stats: $('stats'), days: $('days'),
     settings: $('settings'), editor: $('editor'), wake: $('wake'), cel: $('celebrate'), msg: $('message'), celText: $('celText')
   };
 
@@ -146,7 +146,7 @@
       els.n.textContent = count;
       if (opts.animate) { els.n.classList.remove('bump'); void els.n.offsetWidth; els.n.classList.add('bump'); }
     }
-    document.querySelector('.count .of').textContent = `af ${goal}`;
+    document.querySelector('.count .of').textContent = goal ? `af ${goal}` : 'i dag';
     if (dotsFor !== goal) { els.dots.innerHTML = '<i></i>'.repeat(goal); dotsFor = goal; }
     [...els.dots.children].forEach((d, i) => d.classList.toggle('on', i < count));
 
@@ -256,7 +256,7 @@
       body: 'I starten skelner barnet ikke mellem nat og dag. Det skal ammes en eller flere gange om natten for at få nok i løbet af døgnet, og for at mælken bliver ved med at blive dannet. Mindst otte måltider i døgnet hører med, så længe barnet er helt lille.',
       source: 'Sundhedsstyrelsen, Sunde børn' },
     { id: 'diapers', title: 'Bleen siger mere end uret',
-      body: 'Hvor meget der kommer ind, kan ikke ses. Bleen giver et indtryk. Mindst seks tunge, våde bleer i døgnet, synkelyde ved brystet og mindst otte måltider, mens barnet er lille, er tegn på, at det får nok. Vægten følges på en kurve hos sundhedsplejersken og lægen. Den må gerne svinge lidt.',
+      body: 'Hvor meget der kommer ind, kan ikke ses. Bleen giver et indtryk. Når de første dage er gået, er mindst seks tunge, våde bleer i døgnet, synkelyde ved brystet og mindst otte måltider, mens barnet er lille, tegn på, at det får nok. I de første dage er der færre våde bleer. Vægten følges på en kurve hos sundhedsplejersken og lægen. Den må gerne svinge lidt.',
       source: 'Sundhedsstyrelsen, Sunde børn' },
     { id: 'supply', title: 'Mælken følger barnet',
       body: 'Mængden retter sig efter det, barnet tager. Den kan ikke gemmes til senere. Vil barnet pludselig ammes oftere, er det ofte, fordi det er vokset. Læg det til oftere, også om natten, og lad det blive færdigt ved det ene bryst, før I tilbyder det andet. Overvejer I modermælkserstatning, så tal med sundhedsplejersken. Gives det, er det efter amningen.',
@@ -282,10 +282,13 @@
     { id: 'self', title: 'Dig selv',
       body: 'Undgå rygning. Kan du ikke holde op, så ryg efter amningen. Den, der ammer, bør være tilbageholdende med alkohol: højst én genstand på en dag, og vent to til tre timer med næste amning. Nogle få genstande om ugen er ikke en grund til at stoppe. Højst tre kopper kaffe om dagen. Nødvendig medicin aftales med lægen.',
       source: 'Sundhedsstyrelsen, anbefalinger om alkohol, og Sunde børn' },
+    { id: 'call', title: 'Ring hellere en gang for meget',
+      body: 'Kontakt sundhedsplejersken eller lægen, hvis barnet er svært at vække til måltiderne eller sutter svagt, får færre våde bleer end før eller har mørk urin, bliver mere gult i huden eller i det hvide i øjnene, eller ikke tager på. Har et barn under tre måneder feber, altså 38 grader eller mere, så ring altid til lægen. Uden for lægens åbningstid ringer I til lægevagten, i Region Hovedstaden 1813. Ved livsfare: 112.',
+      source: 'Sundhedsstyrelsen, Sunde børn, og sundhed.dk' },
   ];
   const ADVICE_GROUPS = [
     { title: 'Måltidet', ids: ['cues', 'same', 'eight', 'evening', 'night'] },
-    { title: 'Om barnet får nok', ids: ['diapers', 'supply', 'water'] },
+    { title: 'Om barnet får nok', ids: ['diapers', 'supply', 'water', 'call'] },
     { title: 'Når brystet gør ondt', ids: ['latch', 'breast'] },
     { title: 'Hen ad vejen', ids: ['months', 'vitamin', 'sut'] },
     { title: 'Dig selv', ids: ['self'] },
@@ -312,7 +315,7 @@
       `<article class="adv-now"><span class="k">Lige nu</span>${card(now)}</article>` +
       ADVICE_GROUPS.map(g =>
         `<section class="adv-block"><h3>${g.title}</h3>` +
-        g.ids.filter(id => id !== now.id).map(id => `<article>${card(adviceById(id))}</article>`).join('') + '</section>'
+        g.ids.filter(id => id !== now.id).map(id => `<article${id === 'call' ? ' class="call"' : ''}>${card(adviceById(id))}</article>`).join('') + '</section>'
       ).join('');
   }
 
@@ -381,7 +384,7 @@
     render({ animate: true });
 
     const goal = settings().goal;
-    if (inDay(midnight()).length === goal && store.get(K.cel, '') !== dayKey()) {
+    if (goal && inDay(midnight()).length === goal && store.get(K.cel, '') !== dayKey()) {
       store.set(K.cel, dayKey());
       setTimeout(celebrate, 600);
     }
@@ -443,9 +446,11 @@
   }
 
   // Fortryd vises kort efter et start eller stop. Ellers rettes og slettes amninger i Historik.
-  let toastTimer = null, toastFeed = null;
-  function toast(text, t, ms) {
+  // Efter et start slettes amningen igen; efter et stop fortsætter den, som om den aldrig var stoppet.
+  let toastTimer = null, toastFeed = null, toastResume = null;
+  function toast(text, t, ms, resume = null) {
     toastFeed = t;
+    toastResume = resume;
     $('toastText').textContent = text;
     $('toast').classList.add('show');
     $('toast').parentElement.classList.add('toasting');
@@ -458,16 +463,30 @@
     $('toast').classList.remove('show');
     $('toast').parentElement.classList.remove('toasting');
     $('toast').setAttribute('aria-hidden', 'true');
-    toastFeed = null;
+    toastFeed = null; toastResume = null;
   }
-  const toastStopped = f => { if (f && f.d) toast(`Gemt · ${Math.max(1, Math.round(f.d / 60))} min`, f.t, 8000); };
+  function stopWithUndo() {
+    const a = active(), f = stopFeed();
+    if (f && f.d) toast(`Gemt · ${Math.max(1, Math.round(f.d / 60))} min`, f.t, 8000, a);
+  }
   $('toastUndo').addEventListener('click', () => {
-    const f = findFeed(toastFeed);
+    const f = findFeed(toastFeed), resume = toastResume;
     hideToast();
-    if (!f) return;
-    if (isLive(f)) { store.set(K.active, null); pushCancel(); stopAlarm(); keepAwake(false); els.press.classList.remove('starting'); }
-    saveFeeds(feeds().filter(x => x.t !== f.t));
-    chosenSide = null;
+    if (!f || (resume && active())) return;
+    if (resume) {
+      const list = feeds().slice(), g = list.find(x => x.t === f.t);
+      g.d = null; delete g.u;
+      saveFeeds(list);
+      store.set(K.active, resume);
+      if (!resume.paused) {
+        keepAwake(true);
+        if (settings().push) pushCall('/schedule', { start: Date.now() - elapsed(resume), label: pushLabel() });
+      }
+    } else {
+      if (isLive(f)) { store.set(K.active, null); pushCancel(); stopAlarm(); keepAwake(false); els.press.classList.remove('starting'); }
+      saveFeeds(feeds().filter(x => x.t !== f.t));
+      chosenSide = null;
+    }
     haptic([20]);
     resetSub(); tick(); render();
   });
@@ -477,6 +496,7 @@
     const a = active();
     document.body.classList.toggle('timing', !!a);
     document.body.classList.toggle('paused', !!a?.paused);
+    els.press.setAttribute('aria-label', !a ? 'Start amning' : a.paused ? 'Fortsæt amningen. Hold for at stoppe' : 'Sæt amningen på pause. Hold for at stoppe');
     if (!a) {
       els.arc.style.strokeDasharray = '0 1';
       drawDayline();
@@ -512,7 +532,7 @@
       held = true;
       els.press.classList.remove('holding');
       haptic([40]);
-      toastStopped(stopFeed());
+      stopWithUndo();
     }, HOLD_MS);
   });
   const cancelHold = () => { clearTimeout(holdTimer); els.press.classList.remove('holding'); };
@@ -546,7 +566,7 @@
     stopSound();
   }
   $('awakeBtn').addEventListener('click', () => { haptic([30]); stopAlarm(); pushCancel(); });
-  $('endBtn').addEventListener('click', () => { haptic([30]); toastStopped(stopFeed()); });
+  $('endBtn').addEventListener('click', () => { haptic([30]); stopWithUndo(); });
   document.addEventListener('pointerdown', () => unlockAudio());   // også når appen genåbnes midt i en amning
 
   // ---------- Notifikationer på låst skærm ----------
@@ -602,7 +622,7 @@
 
   // ---------- Historik ----------
   let logDays = 7;
-  function renderLog() {
+  function renderLog({ fresh = false } = {}) {
     const all = feeds();
     const starts = [];
     let s0 = midnight();
@@ -631,17 +651,11 @@
       `<div><b>${avgTotal ? ht(avgTotal) : '–'}</b><span>Ammetid pr. døgn</span></div>` +
       `<div><b>${avgDur ? Math.round(avgDur) + '<small>min</small>' : '–'}</b><span>Varighed pr. amning</span></div>` +
       `<div><b>${avgGap ? ht(avgGap) : '–'}</b><span>Mellem amninger</span></div>`;
+    $('statsNote').textContent = fullDays.length
+      ? `Tal pr. døgn er gennemsnit af ${fullDays.length === 1 ? 'ét helt døgn' : `${fullDays.length} hele døgn`}. I dag tæller med, når døgnet er omme.`
+      : '';
 
-    // Kurve: ammetid pr. døgn, ældste til venstre
-    const series = starts.slice().reverse().map(s => ({ s, ms: dayTotal(s) }));
-    const max = Math.max(60 * 60e3, ...series.map(x => x.ms)) * 1.1;
-    els.bars.innerHTML = series.map(x =>
-      `<i class="${x.s === midnight() ? 'today' : ''}" style="height:${(x.ms / max * 100).toFixed(1)}%" title="${dayLabel(x.s)}: ${fmtTotal(x.ms) || '0 min'}"></i>`).join('') +
-      (avgTotal ? `<span class="avg" style="bottom:${(avgTotal / max * 100).toFixed(1)}%"></span>` : '');
-    els.chartAvg.textContent = avgTotal ? `Ø ${fmtTotalShort(avgTotal)}` : '';
-    els.chartFrom.textContent = dayLabel(from);
-
-    const open = new Set([...els.days.querySelectorAll('li.open')].map(li => li.dataset.start));
+    const open = fresh ? new Set([String(midnight())]) : new Set([...els.days.querySelectorAll('li.open')].map(li => li.dataset.start));
     els.days.innerHTML = '';
     starts.forEach((start, i) => {
       const list = inDay(start, all), total = dayTotal(start);
@@ -673,8 +687,33 @@
 
   function openSheet(el) { el.classList.add('open'); el.setAttribute('aria-hidden', 'false'); el.scrollTop = 0; }
   function closeSheet(el) { el.classList.remove('open'); el.setAttribute('aria-hidden', 'true'); }
-  $('logBtn').addEventListener('click', () => { renderLog(); openSheet(els.sheet); });
-  $('dayBtn').addEventListener('click', () => { renderLog(); openSheet(els.sheet); });
+  // Træk ned fra toppen for at lukke, så Luk-knappen oppe i hjørnet ikke er den eneste vej ud med én hånd
+  document.querySelectorAll('.sheet').forEach(el => {
+    let y0 = null, dy = 0;
+    el.addEventListener('touchstart', e => {
+      y0 = el.scrollTop <= 0 && e.touches.length === 1 ? e.touches[0].clientY : null;
+      dy = 0;
+    }, { passive: true });
+    el.addEventListener('touchmove', e => {
+      if (y0 === null) return;
+      dy = e.touches[0].clientY - y0;
+      if (dy <= 0) { y0 = null; el.style.transform = ''; el.style.transition = ''; return; }
+      e.preventDefault();
+      el.style.transition = 'none';
+      el.style.transform = `translateY(${dy}px)`;
+    }, { passive: false });
+    const end = () => {
+      if (y0 === null) return;
+      y0 = null;
+      el.style.transition = ''; el.style.transform = '';
+      if (dy > 110) el.querySelector('.close').click();
+    };
+    el.addEventListener('touchend', end);
+    el.addEventListener('touchcancel', () => { dy = 0; end(); });
+  });
+  const openLog = () => { renderLog({ fresh: true }); openSheet(els.sheet); };
+  $('logBtn').addEventListener('click', openLog);
+  $('dayBtn').addEventListener('click', openLog);
   $('closeLog').addEventListener('click', () => closeSheet(els.sheet));
   els.seg.addEventListener('click', e => {
     const b = e.target.closest('button'); if (!b) return;
@@ -759,7 +798,8 @@
   const goalVal = $('goalVal'), themeSeg = $('themeSeg'), scToggle = $('scToggle'), pushToggle = $('pushToggle'), pushStatus = $('pushStatus');
   function renderSettings() {
     const st = settings();
-    goalVal.textContent = st.goal;
+    goalVal.textContent = st.goal || '–';
+    $('goalHelp').textContent = st.goal ? 'Antal amninger pr. døgn' : 'Intet mål. Forsiden viser kun antallet';
     [...themeSeg.children].forEach(b => b.classList.toggle('on', b.dataset.v === st.theme));
     scToggle.checked = !!st.shortcut;
     pushToggle.checked = !!st.push;
@@ -770,7 +810,7 @@
   $('closeSet').addEventListener('click', () => { closeSheet(els.settings); render(); });
   $('goalStep').addEventListener('click', e => {
     const b = e.target.closest('button'); if (!b) return;
-    setSetting('goal', Math.max(1, Math.min(16, settings().goal + +b.dataset.step)));
+    setSetting('goal', Math.max(0, Math.min(16, settings().goal + +b.dataset.step)));
     haptic([15]);
     renderSettings(); render();
   });
@@ -838,7 +878,13 @@
       const data = JSON.parse(await file.text());
       if (!data || !['ammetid', 'boobielicious'].includes(data.app) || !Array.isArray(data.feeds)) throw new Error('format');
       const have = new Set(feeds().map(f => f.t));
-      const incoming = data.feeds.filter(valid).map(f => ({ t: f.t, d: Number.isFinite(f.d) ? f.d : null, s: typeof f.s === 'string' ? f.s : '', ...(f.u ? { u: 1 } : {}) }));
+      // Kun kendte værdier: siden indgår i HTML-klasser, så en redigeret fil må ikke kunne smugle kode ind
+      const incoming = data.feeds.filter(valid).map(f => ({
+        t: f.t,
+        d: Number.isFinite(f.d) && f.d > 0 ? Math.round(f.d) : null,
+        s: ['L', 'R', 'LR', 'RL'].includes(f.s) ? f.s : '',
+        ...(f.u ? { u: 1 } : {})
+      }));
       const added = incoming.filter(f => !have.has(f.t));
       saveFeeds(feeds().concat(added));
       backupStatus.textContent = added.length
@@ -997,4 +1043,6 @@
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
   }
+  // Bed browseren om ikke at rydde historikken, når telefonen mangler plads
+  if (navigator.storage && navigator.storage.persist) navigator.storage.persisted().then(p => p || navigator.storage.persist()).catch(() => {});
 })();
