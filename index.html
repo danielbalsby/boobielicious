@@ -348,6 +348,7 @@
   .adv-block { margin-top: 34px; }
   .adv-block h3 { font-size: 10px; font-weight: 500; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
   .adv-block article { margin-top: 14px; padding-top: 14px; border-top: 1px solid color-mix(in srgb, var(--sand-deep) 60%, transparent); }
+  .adv-block article.call { margin-top: 18px; padding: 14px 0 2px 14px; border-top: 0; border-left: 2px solid var(--accent); }
   .adv-now { margin: 24px -12px 0; padding: 16px 16px 18px; border-radius: 18px; background: var(--sand); }
   .adv-now .k { font-size: 10px; font-weight: 500; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
   .adv-now h4 { margin-top: 8px; }
@@ -537,6 +538,11 @@
     margin-right: calc(-1 * (env(safe-area-inset-right) + 24px));
     padding: calc(env(safe-area-inset-top) + 24px) calc(env(safe-area-inset-right) + 24px) 10px calc(env(safe-area-inset-left) + 24px);
   }
+  .sheet-head::before {
+    content: ""; position: absolute; left: 50%; top: calc(env(safe-area-inset-top) + 8px);
+    width: 36px; height: 4px; margin-left: -18px; border-radius: 2px;
+    background: var(--sand-deep); opacity: .8;
+  }
   .sheet-head h2 { font-family: var(--serif); font-weight: 400; font-size: 40px; line-height: 1; }
   .close { font-size: 13px; color: var(--muted); padding: 8px 0 8px 16px; letter-spacing: .04em; }
   .seg {
@@ -579,14 +585,8 @@
   .detail span { white-space: nowrap; margin-right: 14px; }
   .detail span em { font-style: normal; color: var(--ink); margin-right: 4px; }
   .days li.open .detail { display: block; animation: bump .4s ease; }
-  .chart { margin: 0 0 30px; }
-  .chart-head, .chart-foot { display: flex; justify-content: space-between; font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
-  .chart-head { margin-bottom: 10px; }
-  .chart-foot { margin-top: 6px; letter-spacing: .04em; text-transform: none; }
-  .bars { position: relative; height: 60px; display: flex; align-items: flex-end; gap: 3px; border-bottom: 1px solid var(--sand-deep); }
-  .bars i { flex: 1; min-height: 1px; border-radius: 2px 2px 0 0; background: var(--sand-deep); transition: height .5s cubic-bezier(.2,.7,.2,1); }
-  .bars i.today { background: var(--areola); }
-  .bars .avg { position: absolute; left: 0; right: 0; height: 0; border-top: 1px dashed var(--muted); opacity: .45; }
+  .stats-note { margin: -14px 0 30px; font-size: 11px; line-height: 1.5; color: var(--muted); }
+  .stats-note:empty { margin-bottom: 16px; }
   .legend { display: flex; gap: 16px; align-items: center; margin-bottom: 14px; font-size: 11px; color: var(--muted); }
   .legend i { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 6px; vertical-align: 0; }
   .legend .l { background: var(--areola); } .legend .r { background: var(--side-r); }
@@ -737,7 +737,7 @@
 
   <main>
     <div class="stage">
-    <button class="press" id="press" aria-label="Registrer amning">
+    <button class="press" id="press" aria-label="Start amning">
       <span class="ring"></span><span class="ring"></span>
       <svg viewBox="0 0 200 200" aria-hidden="true">
         <circle cx="100" cy="100" r="100" fill="var(--skin)"/>
@@ -790,11 +790,7 @@
       <button data-days="7" class="on">7 dage</button><button data-days="14">14 dage</button><button data-days="30">30 dage</button>
     </div>
     <div class="stats" id="stats"></div>
-    <div class="chart">
-      <div class="chart-head"><span>Ammetid pr. døgn</span><span id="chartAvg"></span></div>
-      <div class="bars" id="bars"></div>
-      <div class="chart-foot"><span id="chartFrom"></span><span>I dag</span></div>
-    </div>
+    <p class="stats-note" id="statsNote"></p>
     <div class="legend"><span><i class="l"></i>Venstre</span><span><i class="r"></i>Højre</span><span class="tip">Tryk på en dag for at rette</span></div>
     <div class="grid">
       <div class="axis" aria-hidden="true"><span style="left:0">00</span><span style="left:25%">06</span><span style="left:50%">12</span><span style="left:75%">18</span><span style="left:100%">24</span></div>
@@ -818,7 +814,7 @@
 
     <div class="set">
       <div class="set-row">
-        <div><b>Dagligt mål</b><small>Antal amninger pr. døgn</small></div>
+        <div><b>Dagligt mål</b><small id="goalHelp">Antal amninger pr. døgn</small></div>
         <div class="stepper" id="goalStep"><button data-step="-1" aria-label="Færre">−</button><output id="goalVal">8</output><button data-step="1" aria-label="Flere">+</button></div>
       </div>
       <div class="set-row col">
@@ -899,7 +895,7 @@
 <div class="celebrate" id="celebrate" aria-hidden="true"></div>
 <div class="message" id="message" role="status"><p><span class="big" id="celText">Otte i dag.</span><span class="small">Du giver så meget. Hvil dig, når du kan.</span></p></div>
 
-<script src="sound.js?v=27"></script>
-<script src="app.js?v=27"></script>
+<script src="sound.js?v=28"></script>
+<script src="app.js?v=28"></script>
 </body>
 </html>
