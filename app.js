@@ -157,6 +157,7 @@
     els.undo.disabled = count === 0;
     els.hint.style.opacity = !feeds().length && !active() ? 1 : 0;
     els.nudge.hidden = !needsBackup();
+    renderAdvice();
     if (els.sheet.classList.contains('open')) renderLog();
   }
 
@@ -237,6 +238,108 @@
     const b = e.target.closest('[data-fix]');
     if (b) openEditor({ feed: findFeed(+b.dataset.fix) });
   });
+
+  // ---------- Råd (Sundhedsstyrelsen) ----------
+  // Korte, generelle råd. Forsiden viser ét, der passer til tidspunktet. Arkene står i Råd.
+  const ADVICE = [
+    { id: 'cues', title: 'Før gråden', lead: 'Læg barnet til, når det savler, sutter eller søger med munden. Gråd kommer senere.',
+      body: 'Barnet fortæller, at det er sultent, før det græder. Det sutter, savler, putter fingre i munden, åbner munden og drejer hovedet fra side til side. Læg det til ved de tegn, også om natten. Gråd er et sent tegn, og så kan det være sværere at få godt fat.',
+      source: 'Sundhedsstyrelsen, Sunde børn' },
+    { id: 'same', title: 'Samme bryst, til barnet slipper', lead: 'Den første mælk slukker tørsten. Den senere mætter. Bliv ved samme bryst, til barnet slipper.',
+      body: 'Mælkens sammensætning ændrer sig undervejs. Den første slukker tørsten, den senere er mere mættende. Læg barnet til samme bryst flere gange, indtil det selv afviser det, og tilbyd først derefter det andet. 1/2 og 2/2 er appens måde at huske det på: bliv ved det bryst, I er i gang med, og skift bagefter.',
+      source: 'Sundhedsstyrelsen, Sunde børn' },
+    { id: 'eight', title: 'Mindst otte i starten', lead: 'I de første uger er mindst otte måltider i døgnet det, der holder både barn og mælk i gang.',
+      body: 'Den nyfødtes mave er lille, så måltiderne er mange og små. I de første uger skal der mindst otte ammemåltider til i døgnet, også om natten, for at mætte barnet og holde mælken i gang. Senere kan der godt være færre, og en tår indimellem. Tallet på forsiden er jeres eget mål og kan ændres i Indstillinger.',
+      source: 'Sundhedsstyrelsen, Sunde børn' },
+    { id: 'evening', title: 'Tættere om aftenen', lead: 'Om aftenen vil barnet ofte ammes oftere. Det hører med til rytmen.',
+      body: 'Nogle måltider er lange, andre ligger tæt. Det er især om aftenen, barnet ofte vil ammes hyppigere. Følg rytmen. Vil det ammes næsten uafbrudt, kan det også være, at det ikke fik den mættende mælk til sidst på brystet, eller at det ikke har godt fat. Er I i tvivl, så spørg sundhedsplejersken.',
+      source: 'Sundhedsstyrelsen, Sunde børn' },
+    { id: 'night', title: 'Også om natten', lead: 'Natamning hører med, så længe barnet er lille. Den er med til, at der dannes nok mælk.',
+      body: 'I starten skelner barnet ikke mellem nat og dag. Det skal ammes en eller flere gange om natten for at få nok i løbet af døgnet, og for at mælken bliver ved med at blive dannet. Mindst otte måltider i døgnet hører med, så længe barnet er helt lille.',
+      source: 'Sundhedsstyrelsen, Sunde børn' },
+    { id: 'diapers', title: 'Bleen siger mere end uret', lead: 'Mindst seks tunge, våde bleer i døgnet siger mere om, hvorvidt barnet får nok, end uret gør.',
+      body: 'Hvor meget der kommer ind, kan ikke ses. Bleen giver et indtryk. Mindst seks tunge, våde bleer i døgnet, synkelyde ved brystet og mindst otte måltider, mens barnet er lille, er tegn på, at det får nok. Vægten følges på en kurve hos sundhedsplejersken og lægen. Den må gerne svinge lidt.',
+      source: 'Sundhedsstyrelsen, Sunde børn' },
+    { id: 'supply', title: 'Mælken følger barnet', lead: 'Jo mere barnet sutter, jo mere mælk bliver der dannet. Den kan ikke spares op.',
+      body: 'Mængden retter sig efter det, barnet tager. Den kan ikke gemmes til senere. Vil barnet pludselig ammes oftere, er det ofte, fordi det er vokset. Læg det til oftere, også om natten, og lad det blive færdigt ved det ene bryst, før I tilbyder det andet. Overvejer I modermælkserstatning, så tal med sundhedsplejersken. Gives det, er det efter amningen.',
+      source: 'Sundhedsstyrelsen, Sunde børn' },
+    { id: 'water', title: 'Tørsten', lead: 'Modermælk slukker også tørsten. Ved fuld amning behøver barnet ikke vand ved siden af.',
+      body: 'Modermælk dækker både mad og væske og beskytter mod væskemangel. Så længe barnet ammes fuldt, behøver det ikke vand ved siden af.',
+      source: 'Sundhedsstyrelsen, Sunde børn' },
+    { id: 'latch', title: 'Når det gør ondt', lead: 'Det må godt svie det første øjeblik. Det skal ikke blive ved med at gøre ondt.',
+      body: 'I de første uger er ømme brystvorter almindelige, især lige når barnet tager fat. Gør det stadig ondt efter et par minutter, har barnet sandsynligvis ikke godt fat. Munden skal dække det brune område, læberne være krænget ud, og hagen røre brystet. Der skal være rytmiske sut og synk. Tilbagelænet stilling giver mindre træk. Slip brystet ved at stikke en finger i barnets mundvig. En dråbe mælk på brystvorten bagefter plejer huden. Fortsætter det, så tal med sundhedsplejersken.',
+      source: 'Sundhedsstyrelsen, Sunde børn, og Amning – en håndbog for sundhedspersonale (2023)' },
+    { id: 'breast', title: 'Hårdt, ømt eller rødt', lead: 'Amningen fortsætter. Det er ikke et mål at tømme brystet helt.',
+      body: 'Spænding, knuder og brystbetændelse hænger sammen. Amningen fortsætter efter barnets behov, og det er ikke et mål at tømme brystet. Brug pumpen mindst muligt, så produktionen ikke presses op over det, barnet tager. Kølige omslag i 10 til 20 minutter mellem amningerne kan dæmpe hævelse og smerte. Dyb massage kan skade vævet. Tilbagelænet stilling og godt fat hjælper. Føler du dig sløj eller får feber, så kontakt lægen. Amningen fortsætter, også hvis du får antibiotika.',
+      source: 'Sundhedsstyrelsen, Amning – en håndbog for sundhedspersonale (2023)' },
+    { id: 'months', title: 'Hvor længe', lead: 'Fuld amning til omkring seks måneder. Derefter gerne ved siden af maden, til barnet er mindst et år.',
+      body: 'Spædbørn ammes fuldt, til de er omkring seks måneder, og delvist til de er tolv måneder eller længere, hvis I trives med det. Overgangskosten introduceres tidligst fra fire måneder og ikke meget efter seks. Vokser barnet, som det skal, så vent til tæt på seks måneder. Fra seks måneder skal maden være jernholdig, med kød eller fisk til de fleste måltider. Børn, der ikke ammes, skal have modermælkserstatning hele første leveår.',
+      source: 'Sundhedsstyrelsen, Sunde børn, Amning – en håndbog for sundhedspersonale (2023) og vejledningen om vitamin og jern' },
+    { id: 'vitamin', title: 'D-vitamin', lead: 'Fra barnet er to uger: 10 mikrogram D-vitamin om dagen, også når det ammes.',
+      body: 'Alle børn skal have 10 mikrogram D-vitamin om dagen fra de er to uger, hele året, til de fylder fire år. Det gælder også børn, der ammes. Dråberne skal være beregnet til spædbørn og gives i munden eller på en ske, ikke i en flaske. Børn, der hver dag drikker mindst 800 ml modermælkserstatning med mindst 1,3 mikrogram D-vitamin pr. 100 ml, skal ikke have ekstra dråber i den periode.',
+      source: 'Sundhedsstyrelsen og Fødevarestyrelsen' },
+    { id: 'sut', title: 'Sut', lead: 'Mens amningen er ved at komme i gang, er suttebehovet bedst brugt ved brystet.',
+      body: 'Mens amningen er ved at komme i gang, og når der er knuder i brystet, er suttebehovet bedst brugt ved brystet. Når amningen er kommet godt i gang, kan I overveje en sut. Giv den første gang, når barnet er roligt, ikke mens det græder.',
+      source: 'Sundhedsstyrelsen, Sunde børn' },
+    { id: 'self', title: 'Dig selv', lead: 'Vær tilbageholdende med alkohol, og aftal nødvendig medicin med lægen.',
+      body: 'Undgå rygning. Kan du ikke holde op, så ryg efter amningen. Den, der ammer, bør være tilbageholdende med alkohol: højst én genstand på en dag, og vent to til tre timer med næste amning. Nogle få genstande om ugen er ikke en grund til at stoppe. Højst tre kopper kaffe om dagen. Nødvendig medicin aftales med lægen.',
+      source: 'Sundhedsstyrelsen, anbefalinger om alkohol, og Sunde børn' },
+  ];
+  const ADVICE_GROUPS = [
+    { title: 'Måltidet', ids: ['cues', 'same', 'eight', 'evening', 'night'] },
+    { title: 'Om barnet får nok', ids: ['diapers', 'supply', 'water'] },
+    { title: 'Når brystet gør ondt', ids: ['latch', 'breast'] },
+    { title: 'Hen ad vejen', ids: ['months', 'vitamin', 'sut'] },
+    { title: 'Dig selv', ids: ['self'] },
+  ];
+  const ADVICE_POOL = ['cues', 'same', 'eight', 'diapers', 'supply', 'latch', 'vitamin', 'months', 'water'];
+  const adviceById = id => ADVICE.find(t => t.id === id);
+
+  function adviceId() {
+    const now = Date.now(), h = new Date().getHours(), list = feeds();
+    if (!list.length) return 'cues';
+    const last = list[list.length - 1];
+    if (list.filter(f => now - f.t < 3 * 3600e3).length >= 3) return 'evening';
+    if (last.d && last.d < 5 * 60 && now - (last.t + last.d * 1000) < 30 * 60e3) return 'same';
+    if (h >= 17 && h < 22) return 'evening';
+    if (h >= 22 || h < 6) return 'night';
+    if (!isLive(last) && now - last.t - durMs(last) > 4 * 3600e3 && h >= 6 && h < 17) return 'eight';
+    return ADVICE_POOL[Math.floor(now / 86400000) % ADVICE_POOL.length];
+  }
+
+  function renderAdvice() {
+    const btn = $('adviceBtn');
+    if (document.body.classList.contains('timing') && btn.dataset.id) return;   // skift ikke tekst, mens linjen er skjult
+    const tip = adviceById(adviceId());
+    if (btn.dataset.id === tip.id) return;
+    btn.dataset.id = tip.id;
+    $('adviceText').textContent = tip.lead;
+    btn.setAttribute('aria-label', `Råd. ${tip.lead} Åbn alle råd.`);
+  }
+
+  function renderAdviceSheet() {
+    const current = adviceId();
+    $('adviceList').innerHTML = ADVICE_GROUPS.map(g =>
+      `<section class="adv-block"><h3>${g.title}</h3>` +
+      g.ids.map(id => {
+        const t = adviceById(id);
+        return `<article id="adv-${t.id}" class="${t.id === current ? 'here' : ''}"><h4>${t.title}</h4><p>${t.body}</p><p class="src">${t.source}</p></article>`;
+      }).join('') + '</section>'
+    ).join('');
+  }
+
+  $('adviceBtn').addEventListener('click', () => {
+    renderAdviceSheet();
+    openSheet($('adviceSheet'));
+    const here = document.getElementById('adv-' + adviceId());
+    if (!here) return;
+    setTimeout(() => {
+      if (!$('adviceSheet').classList.contains('open')) return;
+      const top = here.getBoundingClientRect().top;
+      if (top > innerHeight - 120) here.scrollIntoView({ block: 'start' });
+    }, 580);
+  });
+  $('closeAdvice').addEventListener('click', () => closeSheet($('adviceSheet')));
 
   // ---------- Sidevalg ----------
   els.sides.addEventListener('click', e => {
@@ -369,6 +472,7 @@
       els.arc.style.strokeDasharray = '0 1';
       drawDayline();
       renderSince();
+      renderAdvice();
       return;
     }
     const ms = elapsed(a), min = ms / 60000;
@@ -385,6 +489,7 @@
         if (m === 25) startAlarm(); else { cue(m); pulse(); }
       }
     }
+    renderAdvice();
   }
   setInterval(tick, 1000);
 

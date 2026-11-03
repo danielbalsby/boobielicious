@@ -340,6 +340,14 @@
   .status { min-height: 18px; margin-top: 10px; font-size: 12px; color: var(--ink); }
   .warn { margin-top: 12px; padding: 12px 14px; border-left: 2px solid var(--accent); background: color-mix(in srgb, var(--skin) 40%, transparent); font-size: 12px; line-height: 1.55; color: var(--ink); }
   .fine { margin-top: 36px; font-size: 11px; color: var(--muted); text-align: center; }
+  .adv-lead { margin-top: 18px; font-size: 14px; line-height: 1.55; color: var(--muted); }
+  .adv-block { margin-top: 34px; }
+  .adv-block h3 { font-size: 10px; font-weight: 500; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
+  .adv-block article { margin-top: 14px; padding-top: 14px; border-top: 1px solid color-mix(in srgb, var(--sand-deep) 60%, transparent); scroll-margin-top: 92px; }
+  .adv-block article.here { margin-left: -12px; margin-right: -12px; padding: 14px 12px 16px; border: 0; border-radius: 16px; background: var(--sand); }
+  .adv-block h4 { font-family: var(--serif); font-weight: 400; font-style: italic; font-size: 28px; line-height: 1.1; }
+  .adv-block p { margin-top: 8px; font-size: 14px; line-height: 1.55; }
+  .adv-block .src { margin-top: 8px; font-size: 11px; line-height: 1.45; color: var(--muted); }
 
   /* Sikkerhedsalarm: fylder skærmen og skal slukkes aktivt */
   .wake {
@@ -472,6 +480,37 @@
   }
   .since b { font-weight: 500; color: var(--ink); }
   .timing .since { opacity: 0; }
+  .advice {
+    display: block;
+    width: 100%;
+    margin-top: 10px;
+    padding: 0 4px;
+    text-align: center;
+    transition: opacity .35s ease, margin-top .35s ease;
+  }
+  .advice .k {
+    font-size: 10px;
+    letter-spacing: .16em;
+    text-transform: uppercase;
+    color: var(--muted);
+    text-decoration: underline;
+    text-decoration-color: var(--sand-deep);
+    text-underline-offset: 3px;
+  }
+  .advice .t {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    margin-top: 5px;
+    font-family: var(--serif);
+    font-style: italic;
+    font-weight: 400;
+    font-size: 17px;
+    line-height: 1.25;
+    color: var(--ink);
+  }
+  .timing .advice { opacity: 0; pointer-events: none; height: 0; min-height: 0; margin: 0; padding: 0; overflow: hidden; }
   .actions { margin-top: 10px; display: flex; justify-content: center; align-items: center; gap: 4px; }
   .actions .sep { color: var(--sand-deep); }
   .link { position: relative; }
@@ -501,14 +540,20 @@
     transition: transform .55s cubic-bezier(.2,.75,.2,1), visibility 0s linear .55s;
     visibility: hidden;
     padding:
-      calc(env(safe-area-inset-top) + 24px)
+      0
       calc(env(safe-area-inset-right) + 24px)
       calc(env(safe-area-inset-bottom) + 40px)
       calc(env(safe-area-inset-left) + 24px);
   }
   .sheet.open { transform: none; visibility: visible; transition: transform .55s cubic-bezier(.2,.75,.2,1); }
   .sheet-in { max-width: 420px; margin: 0 auto; }
-  .sheet-head { display: flex; align-items: baseline; justify-content: space-between; }
+  .sheet-head {
+    display: flex; align-items: baseline; justify-content: space-between;
+    position: sticky; top: 0; z-index: 3; background: var(--bg);
+    margin-left: calc(-1 * (env(safe-area-inset-left) + 24px));
+    margin-right: calc(-1 * (env(safe-area-inset-right) + 24px));
+    padding: calc(env(safe-area-inset-top) + 24px) calc(env(safe-area-inset-right) + 24px) 10px calc(env(safe-area-inset-left) + 24px);
+  }
   .sheet-head h2 { font-family: var(--serif); font-weight: 400; font-size: 40px; line-height: 1; }
   .close { font-size: 13px; color: var(--muted); padding: 8px 0 8px 16px; letter-spacing: .04em; }
   .seg {
@@ -631,6 +676,7 @@
     .timer { top: calc(100% + 20px); }
     .timer .clock { font-size: 28px; }
     .since { margin-top: 8px; }
+    .advice .t { font-size: 15px; -webkit-line-clamp: 2; }
   }
   /* Opstart: brystet folder sig ud, ordet skrives frem, og brystet glider på plads.
      Alle trin overlapper og bruger samme bløde kurve, så det føles som én bevægelse. */
@@ -736,6 +782,10 @@
       <div class="dayline-lbl" aria-hidden="true"><span id="marks"></span><span class="now-lbl">nu</span></div>
     </button>
     <p class="since" id="since"></p>
+    <button class="advice" id="adviceBtn" type="button">
+      <span class="k">Råd</span>
+      <span class="t" id="adviceText"></span>
+    </button>
     <div class="actions">
       <button class="undo" id="undo" disabled>Fortryd seneste</button>
       <span class="sep" aria-hidden="true">·</span>
@@ -763,6 +813,15 @@
       <div class="axis" aria-hidden="true"><span style="left:0">00</span><span style="left:25%">06</span><span style="left:50%">12</span><span style="left:75%">18</span><span style="left:100%">24</span></div>
       <ol class="days" id="days"></ol>
     </div>
+  </div>
+</section>
+
+<section class="sheet" id="adviceSheet" aria-label="Råd" aria-hidden="true">
+  <div class="sheet-in">
+    <div class="sheet-head"><h2>Råd</h2><button class="close" id="closeAdvice">Luk</button></div>
+    <p class="adv-lead">Korte råd fra de danske anbefalinger. De erstatter ikke jeres sundhedsplejerske eller læge.</p>
+    <div id="adviceList"></div>
+    <p class="fine">Sundhedsstyrelsen: Sunde børn, og Amning – en håndbog for sundhedspersonale (2023). D-vitamin og alkohol: Sundhedsstyrelsen og Fødevarestyrelsen.</p>
   </div>
 </section>
 
@@ -853,7 +912,7 @@
 <div class="celebrate" id="celebrate" aria-hidden="true"></div>
 <div class="message" id="message" role="status"><p><span class="big" id="celText">Otte i dag.</span><span class="small">Du giver så meget. Hvil dig, når du kan.</span></p></div>
 
-<script src="sound.js?v=25"></script>
-<script src="app.js?v=25"></script>
+<script src="sound.js?v=26"></script>
+<script src="app.js?v=26"></script>
 </body>
 </html>
