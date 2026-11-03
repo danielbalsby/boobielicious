@@ -163,10 +163,14 @@
     align-items: center;
     justify-content: center;
     min-height: 0;
+    container-type: size;
   }
+  .stage { position: relative; }
   .press {
     position: relative;
     width: min(66vw, 264px);
+    /* Brystet må aldrig vokse ind i sidevalget: højden under det skal også give plads til uret */
+    width: min(66vw, 264px, calc(100cqh - 56px));
     aspect-ratio: 1;
     border-radius: 50%;
     display: grid;
@@ -343,11 +347,13 @@
   .adv-lead { margin-top: 18px; font-size: 14px; line-height: 1.55; color: var(--muted); }
   .adv-block { margin-top: 34px; }
   .adv-block h3 { font-size: 10px; font-weight: 500; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
-  .adv-block article { margin-top: 14px; padding-top: 14px; border-top: 1px solid color-mix(in srgb, var(--sand-deep) 60%, transparent); scroll-margin-top: 92px; }
-  .adv-block article.here { margin-left: -12px; margin-right: -12px; padding: 14px 12px 16px; border: 0; border-radius: 16px; background: var(--sand); }
-  .adv-block h4 { font-family: var(--serif); font-weight: 400; font-style: italic; font-size: 28px; line-height: 1.1; }
-  .adv-block p { margin-top: 8px; font-size: 14px; line-height: 1.55; }
-  .adv-block .src { margin-top: 8px; font-size: 11px; line-height: 1.45; color: var(--muted); }
+  .adv-block article { margin-top: 14px; padding-top: 14px; border-top: 1px solid color-mix(in srgb, var(--sand-deep) 60%, transparent); }
+  .adv-now { margin: 24px -12px 0; padding: 16px 16px 18px; border-radius: 18px; background: var(--sand); }
+  .adv-now .k { font-size: 10px; font-weight: 500; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
+  .adv-now h4 { margin-top: 8px; }
+  .adv-block h4, .adv-now h4 { font-family: var(--serif); font-weight: 400; font-style: italic; font-size: 28px; line-height: 1.1; }
+  .adv-block p, .adv-now p { margin-top: 8px; font-size: 14px; line-height: 1.55; }
+  .adv-block .src, .adv-now .src { margin-top: 8px; font-size: 11px; line-height: 1.45; color: var(--muted); }
 
   /* Sikkerhedsalarm: fylder skærmen og skal slukkes aktivt */
   .wake {
@@ -387,15 +393,21 @@
   }
   .wake .awake:active { transform: scale(.97); }
   .wake .end { margin-top: 14px; padding: 12px; font-size: 13px; color: var(--muted); text-decoration: underline; text-decoration-color: var(--sand-deep); text-underline-offset: 4px; }
-  .hint {
+  /* Én linje under brystet: hvornår der sidst blev ammet. Under en amning står uret her i stedet. */
+  .last {
     position: absolute;
-    top: calc(100% + 24px); left: 0; right: 0;
+    top: calc(100% + 26px); left: -56px; right: -56px;
     text-align: center;
-    font-size: 12px;
+    font-size: 13px;
+    line-height: 1.4;
     color: var(--muted);
-    letter-spacing: .04em;
-    transition: opacity .5s ease;
+    letter-spacing: .02em;
+    transition: opacity .4s ease;
   }
+  .last b { font-weight: 500; color: var(--ink); }
+  .last button { color: var(--nipple); text-decoration: underline; text-underline-offset: 3px; font-size: 13px; padding: 8px 2px; margin: -8px 0; }
+  :root[data-theme="night"] .last button { color: var(--accent); }
+  .timing .last { opacity: 0; pointer-events: none; }
 
   footer { width: 100%; max-width: 360px; text-align: center; }
 
@@ -467,67 +479,38 @@
   .dayline-lbl span { position: absolute; top: 0; transform: translateX(-50%); }
   .dayline-lbl #marks { position: static; transform: none; }
   .dayline-lbl .now-lbl { right: 0; transform: none; }
-  .strip-head { transition: opacity .5s ease; }
-  .timing .strip-head { opacity: 0; }
-  .day { display: block; width: 100%; padding: 4px 0; text-align: left; }
-  .since {
-    margin-top: 14px;
-    min-height: 18px;
-    font-size: 13px;
-    color: var(--muted);
-    letter-spacing: .02em;
-    transition: opacity .4s ease;
+  .day { display: block; width: 100%; padding: 4px 0; text-align: left; transition: opacity .6s ease; }
+  .timing .day { opacity: .5; }
+
+  /* Bundbjælke: tre faste steder, samme rækkefølge hver gang */
+  .nav { display: flex; margin: 14px -8px 0; }
+  .nav button {
+    position: relative; flex: 1;
+    display: flex; flex-direction: column; align-items: center; gap: 5px;
+    min-height: 52px; padding: 8px 0 2px;
+    font-size: 11px; letter-spacing: .05em; color: var(--muted);
+    transition: color .25s ease;
   }
-  .since b { font-weight: 500; color: var(--ink); }
-  .timing .since { opacity: 0; }
-  .advice {
-    display: block;
-    width: 100%;
-    margin-top: 10px;
-    padding: 0 4px;
-    text-align: center;
-    transition: opacity .35s ease, margin-top .35s ease;
+  .nav button:active { color: var(--ink); }
+  .nav svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.35; stroke-linecap: round; stroke-linejoin: round; }
+  .nudge { position: absolute; top: 7px; left: calc(50% + 9px); width: 6px; height: 6px; border-radius: 50%; background: var(--accent); }
+
+  /* Fortryd: vises kort efter start og stop i stedet for at stå fremme hele tiden */
+  footer { position: relative; }
+  footer.toasting .day { opacity: .12; }
+  .toast {
+    position: absolute; left: 50%; top: 10px; z-index: 2;
+    display: flex; align-items: center; gap: 6px;
+    padding: 6px 6px 6px 18px; border-radius: 999px;
+    background: var(--sand); color: var(--ink);
+    font-size: 13px; letter-spacing: .02em; white-space: nowrap;
+    box-shadow: 0 6px 22px rgba(59, 50, 43, .12);
+    opacity: 0; transform: translate(-50%, 10px); visibility: hidden;
+    transition: opacity .3s ease, transform .45s cubic-bezier(.16,1,.3,1), visibility 0s linear .45s;
   }
-  .advice .k {
-    font-size: 10px;
-    letter-spacing: .16em;
-    text-transform: uppercase;
-    color: var(--muted);
-    text-decoration: underline;
-    text-decoration-color: var(--sand-deep);
-    text-underline-offset: 3px;
-  }
-  .advice .t {
-    display: -webkit-box;
-    -webkit-line-clamp: 3;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-    margin-top: 5px;
-    font-family: var(--serif);
-    font-style: italic;
-    font-weight: 400;
-    font-size: 17px;
-    line-height: 1.25;
-    color: var(--ink);
-  }
-  .timing .advice { opacity: 0; pointer-events: none; height: 0; min-height: 0; margin: 0; padding: 0; overflow: hidden; }
-  .actions { margin-top: 10px; display: flex; justify-content: center; align-items: center; gap: 4px; }
-  .actions .sep { color: var(--sand-deep); }
-  .link { position: relative; }
-  .nudge { position: absolute; top: 8px; right: 4px; width: 5px; height: 5px; border-radius: 50%; background: var(--accent); }
-  :root[data-theme="night"] .since button { color: var(--accent); }
-  .since button { color: var(--nipple); text-decoration: underline; text-underline-offset: 3px; font-size: 13px; }
-  .undo, .link {
-    padding: 10px 9px;
-    font-size: 12px;
-    color: var(--muted);
-    letter-spacing: .04em;
-    text-decoration: underline;
-    text-decoration-color: var(--sand-deep);
-    text-underline-offset: 4px;
-    transition: opacity .3s ease;
-  }
-  .undo:disabled { opacity: .35; pointer-events: none; }
+  .toast.show { opacity: 1; transform: translate(-50%, 0); visibility: visible; transition: opacity .3s ease, transform .45s cubic-bezier(.16,1,.3,1); }
+  .toast button { padding: 9px 14px; border-radius: 999px; font-size: 13px; font-weight: 500; color: var(--nipple); }
+  :root[data-theme="night"] .toast button { color: var(--accent); }
 
   /* Historik */
   .sheet {
@@ -675,8 +658,7 @@
     .press { width: min(50vw, 188px); }
     .timer { top: calc(100% + 20px); }
     .timer .clock { font-size: 28px; }
-    .since { margin-top: 8px; }
-    .advice .t { font-size: 15px; -webkit-line-clamp: 2; }
+    .nav { margin-top: 8px; }
   }
   /* Opstart: brystet folder sig ud, ordet skrives frem, og brystet glider på plads.
      Alle trin overlapper og bruger samme bløde kurve, så det føles som én bevægelse. */
@@ -686,7 +668,7 @@
   .app > footer { transition-delay: .26s; }
   .intro .app > header, .intro .app > footer { opacity: 0; transform: translateY(14px); transition: none; }
   .intro .press { opacity: 0; }
-  .press.arrive .hint { animation: spFade .7s ease .15s both; }
+  .press.arrive ~ .last { animation: spFade .7s ease .15s both; }
   @keyframes spFade { from { opacity: 0; } }
   .splash {
     position: fixed; inset: 0; z-index: 50;
@@ -754,6 +736,7 @@
   </header>
 
   <main>
+    <div class="stage">
     <button class="press" id="press" aria-label="Registrer amning">
       <span class="ring"></span><span class="ring"></span>
       <svg viewBox="0 0 200 200" aria-hidden="true">
@@ -770,9 +753,10 @@
         <g id="ticks"></g>
         <circle class="hold" cx="110" cy="110" r="108" pathLength="1"/>
       </svg>
-      <span class="hint" id="hint">Tryk for at starte</span>
       <span class="timer" aria-live="off"><span class="clock" id="clock">0:00</span><span class="sub" id="sub">Tryk for pause · hold for at stoppe</span></span>
     </button>
+    <p class="last" id="since"></p>
+    </div>
   </main>
 
   <footer>
@@ -781,20 +765,21 @@
       <div class="dayline" id="strip"></div>
       <div class="dayline-lbl" aria-hidden="true"><span id="marks"></span><span class="now-lbl">nu</span></div>
     </button>
-    <p class="since" id="since"></p>
-    <button class="advice" id="adviceBtn" type="button">
-      <span class="k">Råd</span>
-      <span class="t" id="adviceText"></span>
-    </button>
-    <div class="actions">
-      <button class="undo" id="undo" disabled>Fortryd seneste</button>
-      <span class="sep" aria-hidden="true">·</span>
-      <button class="link" id="adviceLink">Råd</button>
-      <span class="sep" aria-hidden="true">·</span>
-      <button class="link" id="logBtn">Historik</button>
-      <span class="sep" aria-hidden="true">·</span>
-      <button class="link" id="setBtn">Indstillinger<i class="nudge" id="nudge" hidden></i></button>
-    </div>
+    <nav class="nav" aria-label="Menu">
+      <button id="adviceBtn">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 6.2c2.9-1.1 5.7-.9 8.5.9 2.8-1.8 5.6-2 8.5-.9v11.6c-2.9-1.1-5.7-.9-8.5.9-2.8-1.8-5.6-2-8.5-.9z"/><path d="M12 7.1v11.6"/></svg>
+        Råd
+      </button>
+      <button id="logBtn">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 19.5v-6M12 19.5V5M18 19.5v-9.5"/></svg>
+        Historik
+      </button>
+      <button id="setBtn">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h8.5M16.5 8H20M4 16h3.5M11.5 16H20"/><circle cx="14.5" cy="8" r="2"/><circle cx="9.5" cy="16" r="2"/></svg>
+        Indstillinger<i class="nudge" id="nudge" hidden></i>
+      </button>
+    </nav>
+    <div class="toast" id="toast" role="status" aria-hidden="true"><span id="toastText"></span><button id="toastUndo">Fortryd</button></div>
   </footer>
 </div>
 
@@ -914,7 +899,7 @@
 <div class="celebrate" id="celebrate" aria-hidden="true"></div>
 <div class="message" id="message" role="status"><p><span class="big" id="celText">Otte i dag.</span><span class="small">Du giver så meget. Hvil dig, når du kan.</span></p></div>
 
-<script src="sound.js?v=26"></script>
-<script src="app.js?v=26"></script>
+<script src="sound.js?v=27"></script>
+<script src="app.js?v=27"></script>
 </body>
 </html>
