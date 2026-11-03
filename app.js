@@ -328,7 +328,7 @@
     ).join('');
   }
 
-  $('adviceBtn').addEventListener('click', () => {
+  function openAdvice() {
     renderAdviceSheet();
     openSheet($('adviceSheet'));
     const here = document.getElementById('adv-' + adviceId());
@@ -338,7 +338,9 @@
       const top = here.getBoundingClientRect().top;
       if (top > innerHeight - 120) here.scrollIntoView({ block: 'start' });
     }, 580);
-  });
+  }
+  $('adviceBtn').addEventListener('click', openAdvice);
+  $('adviceLink').addEventListener('click', openAdvice);
   $('closeAdvice').addEventListener('click', () => closeSheet($('adviceSheet')));
 
   // ---------- Sidevalg ----------
