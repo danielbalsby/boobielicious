@@ -593,6 +593,32 @@
   .days li.open .detail { display: block; animation: bump .4s ease; }
   .stats-note { margin: -14px 0 30px; font-size: 11px; line-height: 1.5; color: var(--muted); }
   .stats-note:empty { margin-bottom: 16px; }
+
+  /* Graf: samlet ammetid pr. døgn. Højre kant er reserveret til timetallene. */
+  .chart { margin: 0 0 34px; }
+  .chart[hidden] { display: none; }
+  .chart-head { display: flex; justify-content: space-between; align-items: baseline; font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+  .chart-head #chartAvg { letter-spacing: .04em; text-transform: none; font-size: 11px; }
+  .chart-head #chartAvg[hidden] { display: none; }
+  .chart-head #chartAvg i { display: inline-block; width: 14px; margin-right: 6px; vertical-align: 3px; border-top: 1px dashed var(--muted); }
+  .chart-sel { display: flex; align-items: baseline; gap: 10px; margin-top: 10px; }
+  .chart-sel b { font-family: var(--serif); font-weight: 400; font-size: 32px; line-height: 1; font-variant-numeric: lining-nums; }
+  .chart-sel b small { font-size: 15px; font-style: italic; color: var(--muted); margin-left: 2px; }
+  .chart-sel span { font-size: 12px; color: var(--muted); letter-spacing: .02em; }
+  .plot { position: relative; height: 128px; margin-top: 16px; }
+  .plot-grid { position: absolute; inset: 0; pointer-events: none; }
+  .plot-grid i { position: absolute; left: 0; right: 0; border-top: 1px solid color-mix(in srgb, var(--sand-deep) 55%, transparent); }
+  .plot-grid i span { position: absolute; right: 0; bottom: 3px; font-size: 10px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .plot-grid i.avg { right: 30px; border-top: 1px dashed var(--muted); opacity: .5; }
+  .bars { position: absolute; left: 0; right: 30px; top: 0; bottom: 0; display: flex; align-items: flex-end; border-bottom: 1px solid var(--sand-deep); }
+  .bars button { flex: 1; height: 100%; display: flex; align-items: flex-end; min-width: 0; }
+  .bars i { display: block; width: 100%; border-radius: 3px 3px 0 0; background: var(--sand-deep); transition: height .5s cubic-bezier(.2,.7,.2,1), background .25s ease; }
+  .bars .today i { opacity: .6; }
+  .bars .on i { background: var(--areola); }
+  .chart-x { display: flex; justify-content: space-between; margin: 7px 30px 0 0; font-size: 10px; color: var(--muted); letter-spacing: .04em; }
+  .chart-x.each { gap: 5px; }
+  .chart-x.each span { flex: 1; text-align: center; }
+  .chart-x .on { color: var(--ink); }
   .legend { display: flex; gap: 16px; align-items: center; margin-bottom: 14px; font-size: 11px; color: var(--muted); }
   .legend i { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 6px; vertical-align: 0; }
   .legend .l { background: var(--areola); } .legend .r { background: var(--side-r); }
@@ -797,6 +823,12 @@
     </div>
     <div class="stats" id="stats"></div>
     <p class="stats-note" id="statsNote"></p>
+    <div class="chart" id="chart" hidden>
+      <div class="chart-head"><span>Ammetid dag for dag</span><span id="chartAvg"><i></i>gennemsnit</span></div>
+      <p class="chart-sel" id="chartSel" aria-live="polite"></p>
+      <div class="plot"><div class="plot-grid" id="chartGrid" aria-hidden="true"></div><div class="bars" id="bars"></div></div>
+      <div class="chart-x" id="chartX" aria-hidden="true"></div>
+    </div>
     <div class="legend"><span><i class="l"></i>Venstre</span><span><i class="r"></i>Højre</span><span class="tip">Tryk på en dag for at rette</span></div>
     <div class="grid">
       <div class="axis" aria-hidden="true"><span style="left:0">00</span><span style="left:25%">06</span><span style="left:50%">12</span><span style="left:75%">18</span><span style="left:100%">24</span></div>
@@ -903,7 +935,7 @@
 <div class="celebrate" id="celebrate" aria-hidden="true"></div>
 <div class="message" id="message" role="status"><p><span class="big" id="celText">Otte i dag.</span><span class="small">Du giver så meget. Hvil dig, når du kan.</span></p></div>
 
-<script src="sound.js?v=29"></script>
-<script src="app.js?v=29"></script>
+<script src="sound.js?v=30"></script>
+<script src="app.js?v=30"></script>
 </body>
 </html>

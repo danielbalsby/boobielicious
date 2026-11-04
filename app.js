@@ -646,6 +646,47 @@
 
   // ---------- Historik ----------
   let logDays = 7;
+
+  // Graf: samlet ammetid pr. døgn, ældste til venstre. Tryk på en dag for at se tallet.
+  // Dage før den første registrerede amning udelades, så kurven ikke starter med tomme døgn.
+  let chartPick = null;
+  function renderChart(starts, all, avgTotal, ht) {
+    const first = all.length ? dayStartOf(all[0].t) : Infinity;
+    const days = starts.slice().reverse().filter(s => s >= first).map(s => ({ s, ms: dayTotal(s) }));
+    $('chart').hidden = !days.some(d => d.ms);
+    if ($('chart').hidden) return;
+    const today = midnight();
+    if (!days.some(d => d.s === chartPick)) chartPick = days.length > 1 ? days[days.length - 2].s : today;
+
+    const hours = Math.max(1, Math.ceil(Math.max(...days.map(d => d.ms)) / 3600e3));
+    const step = hours > 6 ? 2 : 1, top = Math.ceil(hours / step) * step * 3600e3;
+    const pct = ms => (ms / top * 100).toFixed(2);
+    let grid = '';
+    for (let h = step; h * 3600e3 <= top; h += step) grid += `<i style="bottom:${pct(h * 3600e3)}%"><span>${h} t</span></i>`;
+    if (avgTotal) grid += `<i class="avg" style="bottom:${pct(avgTotal)}%"></i>`;
+    $('chartGrid').innerHTML = grid;
+
+    $('bars').innerHTML = days.map(d =>
+      `<button data-s="${d.s}" class="${d.s === chartPick ? 'on' : ''}${d.s === today ? ' today' : ''}" aria-label="${dayLabel(d.s)}: ${fmtTotal(d.ms) || 'ingen ammetid'}">` +
+      `<i style="height:${d.ms ? `max(2px, ${pct(d.ms)}%)` : '0'}"></i></button>`).join('');
+    $('bars').style.gap = days.length > 14 ? '2px' : '5px';
+
+    const pick = days.find(d => d.s === chartPick);
+    $('chartSel').innerHTML = `<b>${pick.ms ? ht(pick.ms) : '–'}</b><span>${dayLabel(pick.s)}${pick.s === today ? ', indtil nu' : ''}</span>`;
+    $('chartAvg').hidden = !avgTotal;
+
+    const wd = s => s === today ? 'i dag' : new Date(s).toLocaleDateString('da-DK', { weekday: 'short' }).slice(0, 2);
+    $('chartX').innerHTML = days.length <= 7
+      ? days.map(d => `<span class="${d.s === chartPick ? 'on' : ''}">${wd(d.s)}</span>`).join('')
+      : `<span>${dayLabel(days[0].s)}</span><span>i dag</span>`;
+    $('chartX').classList.toggle('each', days.length <= 7);
+  }
+  $('bars').addEventListener('click', e => {
+    const b = e.target.closest('button'); if (!b) return;
+    chartPick = +b.dataset.s;
+    haptic([10]);
+    renderLog();
+  });
   function renderLog({ fresh = false } = {}) {
     const all = feeds();
     const starts = [];
@@ -668,7 +709,10 @@
     const avgGap = gaps.length ? gaps.reduce((x, y) => x + y, 0) / gaps.length : 0;
     const totals = basis.map(dayTotal).filter(Boolean);
     const avgTotal = totals.length ? totals.reduce((x, y) => x + y, 0) / totals.length : 0;
-    const ht = ms => `${Math.floor(ms / 3600e3)}<small>t</small> ${Math.round(ms % 3600e3 / 60000)}<small>m</small>`;
+    const ht = ms => {
+      const m = Math.round(ms / 60000);
+      return m < 60 ? `${m}<small>min</small>` : `${Math.floor(m / 60)}<small>t</small> ${m % 60}<small>m</small>`;
+    };
     const fmtNum = n => n.toLocaleString('da-DK', { maximumFractionDigits: 1 });
     els.stats.innerHTML =
       `<div><b>${inRange.length ? fmtNum(perDay) : '–'}</b><span>Pr. døgn</span></div>` +
@@ -678,6 +722,8 @@
     $('statsNote').textContent = fullDays.length
       ? `Tal pr. døgn er gennemsnit af ${fullDays.length === 1 ? 'ét helt døgn' : `${fullDays.length} hele døgn`}. I dag tæller med, når døgnet er omme.`
       : '';
+    if (fresh) chartPick = null;
+    renderChart(starts, all, avgTotal, ht);
 
     const open = fresh ? new Set([String(midnight())]) : new Set([...els.days.querySelectorAll('li.open')].map(li => li.dataset.start));
     els.days.innerHTML = '';
