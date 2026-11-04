@@ -349,17 +349,17 @@
   .status { min-height: 18px; margin-top: 10px; font-size: 12px; color: var(--ink); }
   .warn { margin-top: 12px; padding: 12px 14px; border-left: 2px solid var(--accent); background: color-mix(in srgb, var(--skin) 40%, transparent); font-size: 12px; line-height: 1.55; color: var(--ink); }
   .fine { margin-top: 36px; font-size: 11px; color: var(--muted); text-align: center; }
-  .adv-lead { margin-top: 18px; font-size: 14px; line-height: 1.55; color: var(--muted); }
-  .adv-block { margin-top: 34px; }
-  .adv-block h3 { font-size: 10px; font-weight: 500; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
-  .adv-block article { margin-top: 14px; padding-top: 14px; border-top: 1px solid color-mix(in srgb, var(--sand-deep) 60%, transparent); }
-  .adv-block article.call { margin-top: 18px; padding: 14px 0 2px 14px; border-top: 0; border-left: 2px solid var(--accent); }
-  .adv-now { margin: 24px -12px 0; padding: 16px 16px 18px; border-radius: 18px; background: var(--sand); }
-  .adv-now .k { font-size: 10px; font-weight: 500; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
-  .adv-now h4 { margin-top: 8px; }
-  .adv-block h4, .adv-now h4 { font-family: var(--serif); font-weight: 400; font-style: italic; font-size: 28px; line-height: 1.1; }
-  .adv-block p, .adv-now p { margin-top: 8px; font-size: 14px; line-height: 1.55; }
-  .adv-block .src, .adv-now .src { margin-top: 8px; font-size: 11px; line-height: 1.45; color: var(--muted); }
+  .raad-lead { margin-top: 18px; font-size: 14px; line-height: 1.55; color: var(--muted); }
+  .raad-group { margin-top: 34px; }
+  .raad-group h3 { font-size: 10px; font-weight: 500; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
+  .raad-group article { margin-top: 14px; padding-top: 14px; border-top: 1px solid color-mix(in srgb, var(--sand-deep) 60%, transparent); }
+  .raad-group article.call { margin-top: 18px; padding: 14px 0 2px 14px; border-top: 0; border-left: 2px solid var(--accent); }
+  .raad-now { margin: 24px -12px 0; padding: 16px 16px 18px; border-radius: 18px; background: var(--sand); }
+  .raad-now .k { font-size: 10px; font-weight: 500; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
+  .raad-now h4 { margin-top: 8px; }
+  .raad-group h4, .raad-now h4 { font-family: var(--serif); font-weight: 400; font-style: italic; font-size: 28px; line-height: 1.1; }
+  .raad-group p, .raad-now p { margin-top: 8px; font-size: 14px; line-height: 1.55; }
+  .raad-group .src, .raad-now .src { margin-top: 8px; font-size: 11px; line-height: 1.45; color: var(--muted); }
 
   /* Sikkerhedsalarm: fylder skærmen og skal slukkes aktivt */
   .wake {
@@ -843,7 +843,7 @@
 <section class="sheet" id="adviceSheet" aria-label="Råd" aria-hidden="true">
   <div class="sheet-in">
     <div class="sheet-head"><h2 tabindex="-1">Råd</h2><button class="close" id="closeAdvice">Luk</button></div>
-    <p class="adv-lead">Korte råd fra de danske anbefalinger. De erstatter ikke jeres sundhedsplejerske eller læge.</p>
+    <p class="raad-lead">Korte råd fra de danske anbefalinger. De erstatter ikke jeres sundhedsplejerske eller læge.</p>
     <div id="adviceList"></div>
     <p class="fine">Sundhedsstyrelsen: Sunde børn, og Amning – en håndbog for sundhedspersonale (2023). D-vitamin og alkohol: Sundhedsstyrelsen og Fødevarestyrelsen.</p>
   </div>
@@ -938,7 +938,7 @@
 <div class="celebrate" id="celebrate" aria-hidden="true"></div>
 <div class="message" id="message" role="status"><p><span class="big" id="celText">Otte i dag.</span><span class="small">Du giver så meget. Hvil dig, når du kan.</span></p></div>
 
-<script src="sound.js?v=31"></script>
-<script src="app.js?v=31"></script>
+<script src="sound.js?v=32"></script>
+<script src="app.js?v=32"></script>
 </body>
 </html>

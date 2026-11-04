@@ -312,9 +312,9 @@
     const now = adviceById(adviceId());
     const card = t => `<h4>${t.title}</h4><p>${t.body}</p><p class="src">${t.source}</p>`;
     $('adviceList').innerHTML =
-      `<article class="adv-now"><span class="k">Lige nu</span>${card(now)}</article>` +
+      `<article class="raad-now"><span class="k">Lige nu</span>${card(now)}</article>` +
       ADVICE_GROUPS.map(g =>
-        `<section class="adv-block"><h3>${g.title}</h3>` +
+        `<section class="raad-group"><h3>${g.title}</h3>` +
         g.ids.filter(id => id !== now.id).map(id => `<article${id === 'call' ? ' class="call"' : ''}>${card(adviceById(id))}</article>`).join('') + '</section>'
       ).join('');
   }
