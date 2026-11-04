@@ -319,7 +319,7 @@
       ).join('');
   }
 
-  $('adviceBtn').addEventListener('click', () => { renderAdviceSheet(); openSheet($('adviceSheet')); });
+  $('adviceBtn').addEventListener('click', e => { renderAdviceSheet(); openSheet($('adviceSheet'), e.currentTarget); });
   $('closeAdvice').addEventListener('click', () => closeSheet($('adviceSheet')));
 
   // ---------- Sidevalg ----------
@@ -330,7 +330,15 @@
     const a = active();
     if (a) {                                   // skift side under amningen
       const list = feeds().slice(), f = list.find(x => x.t === a.start);
-      if (f && !f.s.includes(side)) { f.s = (f.s + side).slice(-2); saveFeeds(list); flashSub(`Skiftet til ${SIDE[side]}`); }
+      // Et tryk på den side, amningen startede på, fortryder et skift, så et fejltryk ikke flytter sidereglen
+      let text = '';
+      if (f && f.s.length === 2 && f.s[0] === side) { f.s = side; text = `Tilbage på ${SIDE[side]}`; }
+      else if (f && !f.s.includes(side)) { f.s = (f.s + side).slice(-2); text = `Skiftet til ${SIDE[side]}`; }
+      if (text) {
+        saveFeeds(list);
+        flashSub(text);
+        if (settings().push && !a.paused) pushCall('/schedule', { start: Date.now() - elapsed(a), label: pushLabel() });
+      }
     } else chosenSide = side;
     renderSides();
     drawDayline();
@@ -647,6 +655,25 @@
   // ---------- Historik ----------
   let logDays = 7;
 
+  // Én sætning om udviklingen: seneste 7 hele døgn mod de 7 før. Kun når begge uger har nok data,
+  // og kun forskelle, der er til at mærke. Neutrale ord, ingen vurdering af om det er godt eller skidt.
+  function trendText(all) {
+    const week = from => {
+      const days = [];
+      for (let i = from; i < from + 7; i++) { const s = dayStartOf(midnight() - (i - 1) * 864e5 - 1); if (inDay(s, all).length) days.push(s); }
+      if (days.length < 5) return null;
+      return { n: days.reduce((a, s) => a + inDay(s, all).length, 0) / days.length, ms: days.reduce((a, s) => a + dayTotal(s), 0) / days.length };
+    };
+    const now = week(1), before = week(8);
+    if (!now || !before) return '';
+    const dm = Math.round((now.ms - before.ms) / 60000), dn = Math.round(now.n - before.n);
+    const parts = [];
+    if (Math.abs(dm) >= 10) parts.push(`${fmtSpan(Math.abs(dm) * 60000)} ${dm < 0 ? 'mindre' : 'mere'} ammetid`);
+    if (Math.abs(dn) >= 1) parts.push(`${Math.abs(dn) === 1 ? 'én' : Math.abs(dn)} ${Math.abs(dn) === 1 ? 'amning' : 'amninger'} ${dn < 0 ? 'færre' : 'flere'}`);
+    if (!parts.length) return 'Den seneste uge ligner ugen før.';
+    return `Den seneste uge: ${parts.join(' og ')} pr. døgn end ugen før.`;
+  }
+
   // Graf: samlet ammetid pr. døgn, ældste til venstre. Tryk på en dag for at se tallet.
   // Dage før den første registrerede amning udelades, så kurven ikke starter med tomme døgn.
   let chartPick = null;
@@ -724,6 +751,7 @@
       : '';
     if (fresh) chartPick = null;
     renderChart(starts, all, avgTotal, ht);
+    $('trend').textContent = trendText(all);
 
     const open = fresh ? new Set([String(midnight())]) : new Set([...els.days.querySelectorAll('li.open')].map(li => li.dataset.start));
     els.days.innerHTML = '';
@@ -755,8 +783,18 @@
     if (row) { const li = row.parentElement; li.classList.toggle('open'); row.setAttribute('aria-expanded', li.classList.contains('open')); }
   });
 
-  function openSheet(el) { el.classList.add('open'); el.setAttribute('aria-hidden', 'false'); el.scrollTop = 0; }
-  function closeSheet(el) { el.classList.remove('open'); el.setAttribute('aria-hidden', 'true'); }
+  // Fokus følger arket, så VoiceOver læser det, der står foran, og vender tilbage til knappen bagefter
+  let sheetOpener = null;
+  function openSheet(el, opener) {
+    sheetOpener = opener || document.activeElement;
+    el.classList.add('open'); el.setAttribute('aria-hidden', 'false'); el.scrollTop = 0;
+    el.querySelector('h2').focus({ preventScroll: true });
+  }
+  function closeSheet(el) {
+    el.classList.remove('open'); el.setAttribute('aria-hidden', 'true');
+    if (sheetOpener && sheetOpener.focus) sheetOpener.focus({ preventScroll: true });
+    sheetOpener = null;
+  }
   // Træk ned fra toppen for at lukke, så Luk-knappen oppe i hjørnet ikke er den eneste vej ud med én hånd
   document.querySelectorAll('.sheet').forEach(el => {
     let y0 = null, dy = 0;
@@ -781,7 +819,7 @@
     el.addEventListener('touchend', end);
     el.addEventListener('touchcancel', () => { dy = 0; end(); });
   });
-  const openLog = () => { renderLog({ fresh: true }); openSheet(els.sheet); };
+  const openLog = e => { renderLog({ fresh: true }); openSheet(els.sheet, e.currentTarget); };
   $('logBtn').addEventListener('click', openLog);
   $('dayBtn').addEventListener('click', openLog);
   $('closeLog').addEventListener('click', () => closeSheet(els.sheet));
@@ -800,9 +838,11 @@
   function openEditor({ feed, dayStart }) {
     if (feed && isLive(feed)) return;
     const start = feed ? dayStartOf(feed.t) : dayStart;
-    let t = feed ? feed.t : (start === midnight() ? Date.now() : start + 12 * 3600e3);
+    // En glemt amning i dag: 15 min, der sluttede nu, på den side, appen foreslår
+    const isToday = start === midnight();
+    let t = feed ? feed.t : isToday ? Math.max(start, Date.now() - 15 * 60e3) : start + 12 * 3600e3;
     const d = new Date(t);
-    editing = { orig: feed ? feed.t : null, dayStart: start, side: feed ? feed.s : '' };
+    editing = { orig: feed ? feed.t : null, dayStart: start, side: feed ? feed.s : isToday && !active() ? suggestedSide() : '' };
     ed.title.textContent = feed ? 'Ret amning' : 'Tilføj amning';
     ed.day.textContent = fmtDate(new Date(start));
     ed.time.value = `${pad(d.getHours())}:${pad(d.getMinutes())}`;
@@ -878,7 +918,7 @@
     $('pushTestRow').hidden = !st.push;
     renderBackupInfo();
   }
-  $('setBtn').addEventListener('click', () => { renderSettings(); openSheet(els.settings); });
+  $('setBtn').addEventListener('click', e => { renderSettings(); openSheet(els.settings, e.currentTarget); });
   $('closeSet').addEventListener('click', () => { closeSheet(els.settings); render(); });
   $('goalStep').addEventListener('click', e => {
     const b = e.target.closest('button'); if (!b) return;
