@@ -112,7 +112,7 @@
   // Web Audio bruges kun som reserve og oprettes først, når der er brug for den.
   const player = $('player');
   const clips = {};
-  let unlocked = false, ctx = null, eng = null;
+  let unlocked = false, ctx = null, eng = null, loud = false;   // loud: klokkerne ved 10/15 må også tage lyden
 
   function toWav(b) {
     const ch = b.numberOfChannels, len = b.length, sr = b.sampleRate;
@@ -153,7 +153,7 @@
     player.play().then(() => { unlocked = true; }).catch(() => {});
   }
   function play(name) {
-    session(name === 25 ? 'playback' : 'ambient');
+    session(name === 25 || loud ? 'playback' : 'ambient');
     if (clips[name]) {
       player.src = clips[name];
       player.currentTime = 0;
@@ -189,5 +189,7 @@
   const cue = m => cues[m] && cues[m]();
   const stopSound = () => { try { player.pause(); } catch {} session('ambient'); };
 
-  window.Boobie = { Sound, cue, unlockAudio, haptic, stopSound };
+  const setLoud = v => { loud = !!v; };
+
+  window.Boobie = { Sound, cue, unlockAudio, haptic, stopSound, setLoud };
 })();

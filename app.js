@@ -1,7 +1,7 @@
 // Ammetid – amme-tæller
 (() => {
   'use strict';
-  const { cue, unlockAudio, haptic, stopSound } = window.Boobie;
+  const { cue, unlockAudio, haptic, stopSound, setLoud } = window.Boobie;
 
   // Nøglerne bærer appens gamle navn, så eksisterende data stadig findes
   const K = {
@@ -19,7 +19,7 @@
   const AUTO_STOP = 90 * 60e3;           // glemt timer stoppes efter 90 min
   const HOLD_MS = 650;                   // hold for at stoppe
   const PAUSE_MAX = 60 * 60e3;           // glemt pause: amningen afsluttes efter en time
-  const DEFAULTS = { goal: 8, theme: 'auto', shortcut: false, shortcutName: 'Amningstimer', push: false };
+  const DEFAULTS = { goal: 8, theme: 'auto', shortcut: false, shortcutName: 'Amningstimer', push: false, loud: false };
   // Notifikationsserveren (push/worker.js) og dens offentlige nøgle
   const PUSH_URL = 'https://ammetid-push.danielbalsby.workers.dev';
   const PUSH_KEY = 'BLLXRK8O3ob25RvFKh-2cjdA7ox07j4LLsHcscajn8sDCdrN-BiD2itSNFayC3p_0NTGhk4xBk4I8Ug8Au0sRo4';
@@ -905,7 +905,7 @@
   });
 
   // ---------- Indstillinger ----------
-  const goalVal = $('goalVal'), themeSeg = $('themeSeg'), scToggle = $('scToggle'), pushToggle = $('pushToggle'), pushStatus = $('pushStatus');
+  const goalVal = $('goalVal'), themeSeg = $('themeSeg'), scToggle = $('scToggle'), pushToggle = $('pushToggle'), pushStatus = $('pushStatus'), loudToggle = $('loudToggle');
   function renderSettings() {
     const st = settings();
     goalVal.textContent = st.goal || '–';
@@ -915,6 +915,7 @@
     // Genveje-timeren er en nødløsning fra før notifikationerne: kun for dem, der bruger den, eller hvis push ikke findes
     if (st.shortcut || !pushSupported()) $('scSection').hidden = false;
     pushToggle.checked = !!st.push;
+    loudToggle.checked = !!st.loud;
     $('pushTestRow').hidden = !st.push;
     renderBackupInfo();
   }
@@ -932,6 +933,8 @@
     renderSettings(); applyTheme();
   });
   scToggle.addEventListener('change', () => setSetting('shortcut', scToggle.checked));
+  setLoud(settings().loud);
+  loudToggle.addEventListener('change', () => { setSetting('loud', loudToggle.checked); setLoud(loudToggle.checked); });
   pushToggle.addEventListener('change', async () => {
     pushStatus.textContent = '';
     try {
