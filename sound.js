@@ -107,8 +107,9 @@
   })();
 
   // Afspilning: lydene renderes én gang til små WAV-filer og spilles gennem et <audio>-element.
-  // Lydfiler i et medieelement spiller på iPhone, også når lydløs-knappen er slået til.
-  // Web Audio bruges kun som reserve.
+  // Lydsessionen står på "ambient", så Ammetid blander sig med Spotify o.l. i stedet for at stoppe musikken.
+  // Kun 25-minutters alarmen tager lyden ("playback"): den skal høres, også i lydløs, selv hvis musikken pauser.
+  // Web Audio bruges kun som reserve og oprettes først, når der er brug for den.
   const player = $('player');
   const clips = {};
   let unlocked = false, ctx = null, eng = null;
@@ -140,18 +141,19 @@
   }
   renderClips();
 
+  const session = type => { try { if ('audioSession' in navigator && navigator.audioSession.type !== type) navigator.audioSession.type = type; } catch {} };
+  session('ambient');
+  player.addEventListener('ended', () => session('ambient'));
+
+  // Første tryk låser afspilleren op (iPhone kræver et tryk), uden at afbryde anden lyd
   function unlockAudio() {
-    try { if ('audioSession' in navigator) navigator.audioSession.type = 'playback'; } catch {}
-    if (!unlocked && clips.silence) {
-      player.src = clips.silence;
-      player.play().then(() => { unlocked = true; }).catch(() => {});
-    }
-    try {
-      ctx = ctx || new (window.AudioContext || window.webkitAudioContext)();
-      eng = eng || Sound.engine(ctx);
-    } catch {}
+    if (unlocked || !clips.silence) return;
+    session('ambient');
+    player.src = clips.silence;
+    player.play().then(() => { unlocked = true; }).catch(() => {});
   }
   function play(name) {
+    session(name === 25 ? 'playback' : 'ambient');
     if (clips[name]) {
       player.src = clips[name];
       player.currentTime = 0;
@@ -159,8 +161,13 @@
     } else playWebAudio(name);
   }
   function playWebAudio(name) {
-    if (!ctx || !eng) return;
-    ctx.resume().then(() => Sound.patterns[name](eng, ctx.currentTime + .06)).catch(() => {});
+    try {
+      ctx = ctx || new (window.AudioContext || window.webkitAudioContext)();
+      eng = eng || Sound.engine(ctx);
+    } catch { return; }
+    ctx.resume()
+      .then(() => { Sound.patterns[name](eng, ctx.currentTime + .06); setTimeout(() => ctx.suspend().catch(() => {}), 9000); })
+      .catch(() => {});
   }
 
   // Haptik: Android har vibrate(). iPhone (iOS 18+) giver et lille tryk, når en skjult kontakt slås om.
@@ -180,7 +187,7 @@
     25: () => { play(25); haptic([300, 150, 300, 150, 300, 400, 300, 150, 300, 150, 300]); }
   };
   const cue = m => cues[m] && cues[m]();
-  const stopSound = () => { try { player.pause(); } catch {} };
+  const stopSound = () => { try { player.pause(); } catch {} session('ambient'); };
 
   window.Boobie = { Sound, cue, unlockAudio, haptic, stopSound };
 })();
